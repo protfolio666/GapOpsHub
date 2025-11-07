@@ -5,6 +5,7 @@ import { z } from "zod";
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   email: varchar("email", { length: 255 }).notNull().unique(),
+  employeeId: varchar("employee_id", { length: 50 }).unique(),
   name: varchar("name", { length: 255 }).notNull(),
   role: varchar("role", { length: 50 }).notNull(), // Admin, Management, QA/Ops, POC
   department: varchar("department", { length: 100 }),
