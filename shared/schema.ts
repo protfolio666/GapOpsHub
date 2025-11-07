@@ -30,6 +30,9 @@ export const gaps = pgTable("gaps", {
   department: varchar("department", { length: 100 }),
   reporterId: integer("reporter_id").references(() => users.id).notNull(),
   assignedToId: integer("assigned_to_id").references(() => users.id),
+  formTemplateId: integer("form_template_id").references(() => formTemplates.id), // Link to form template used
+  templateVersion: varchar("template_version", { length: 20 }), // Capture template version at submission
+  formResponsesJson: jsonb("form_responses_json"), // Structured form responses
   tatDeadline: timestamp("tat_deadline"),
   resolvedAt: timestamp("resolved_at"),
   closedAt: timestamp("closed_at"),
