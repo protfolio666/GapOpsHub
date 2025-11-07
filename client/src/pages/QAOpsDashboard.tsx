@@ -35,7 +35,21 @@ export default function QAOpsDashboard() {
       assignee: { id: number; name: string; email: string } | null;
     }>;
   }>({
-    queryKey: ["/api/gaps/my", { status: selectedStatus, search: searchQuery }],
+    queryKey: ["/api/gaps/my", selectedStatus, searchQuery],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (selectedStatus && selectedStatus !== 'All') {
+        params.append('status', selectedStatus);
+      }
+      if (searchQuery) {
+        params.append('search', searchQuery);
+      }
+      const queryString = params.toString();
+      const url = `/api/gaps/my${queryString ? `?${queryString}` : ''}`;
+      const response = await fetch(url, { credentials: 'include' });
+      if (!response.ok) throw new Error('Failed to fetch gaps');
+      return response.json();
+    },
   });
 
   const statuses = ["All", "Assigned", "InProgress", "Resolved", "Closed"];
