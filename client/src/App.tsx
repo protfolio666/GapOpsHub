@@ -81,6 +81,7 @@ function App() {
   const handleLogin = async (email: string, password: string) => {
     try {
       const response = await authApi.login(email, password);
+      console.log("Login response:", response);
       setUser(response.user);
       
       const roleRoutes = {
@@ -97,6 +98,7 @@ function App() {
         description: `Welcome back, ${response.user.name}!`,
       });
     } catch (error) {
+      console.error("Login error:", error);
       toast({
         variant: "destructive",
         title: "Login failed",
