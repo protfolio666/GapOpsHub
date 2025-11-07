@@ -16,6 +16,7 @@ const updateUserSchema = z.object({
   name: z.string().min(1).optional(),
   role: z.enum(["Admin", "Management", "QA/Ops", "POC"]).optional(),
   department: z.string().nullable().optional(),
+  employeeId: z.string().nullable().optional(),
   password: z.string().min(8).optional(),
 });
 
@@ -263,13 +264,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const { email, name, role, department, password } = validation.data;
+      const { email, name, role, department, employeeId, password } = validation.data;
+
+      // Check if employeeId is unique (if being updated and not null)
+      if (employeeId !== undefined && employeeId !== null) {
+        const existingEmployee = await storage.getUserByEmployeeId(employeeId);
+        if (existingEmployee && existingEmployee.id !== userId) {
+          return res.status(400).json({ message: "Employee ID already exists" });
+        }
+      }
 
       const updates: Partial<{
         email: string;
         name: string;
         role: string;
         department: string | null;
+        employeeId: string | null;
         passwordHash: string;
       }> = {};
 
@@ -277,6 +287,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (name !== undefined) updates.name = name;
       if (role !== undefined) updates.role = role;
       if (department !== undefined) updates.department = department;
+      if (employeeId !== undefined) updates.employeeId = employeeId;
       if (password !== undefined) {
         const passwordHash = await bcrypt.hash(password, 10);
         updates.passwordHash = passwordHash;
