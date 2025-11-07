@@ -107,14 +107,11 @@ export default function DynamicFormRenderer({ schema, onResponsesChange, initial
   const isQuestionVisible = (question: Question, sectionId: string, instanceIndex = 0): boolean => {
     if (!question.controlledBy) return true;
     
-    const controllingQuestion = schema.sections
-      .find(s => s.id === sectionId)
-      ?.questions.find(q => q.id === question.controlledBy);
+    // Get the value of the controlling question
+    const controllerValue = getResponse(sectionId, question.controlledBy, instanceIndex);
     
-    if (!controllingQuestion) return true;
-    
-    const controllerValue = getResponse(sectionId, question.controlledBy!, instanceIndex);
-    const visibleValues = controllingQuestion.visibleOnValues || [];
+    // Check if this question's visibleOnValues includes the controller's current value
+    const visibleValues = question.visibleOnValues || [];
     
     return visibleValues.includes(controllerValue);
   };
@@ -155,6 +152,16 @@ export default function DynamicFormRenderer({ schema, onResponsesChange, initial
     const currentCount = sectionInstances[sectionId] || 1;
     
     if (currentCount > 1) {
+      // Clean up responses for the removed instance
+      const instanceToRemove = currentCount - 1;
+      const sectionKey = `${sectionId}_${instanceToRemove}`;
+      
+      const newResponses = { ...responses };
+      delete newResponses[sectionKey];
+      
+      setResponses(newResponses);
+      onResponsesChange(newResponses);
+      
       setSectionInstances({
         ...sectionInstances,
         [sectionId]: currentCount - 1

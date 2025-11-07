@@ -109,24 +109,76 @@ export default function GapSubmissionForm() {
 
     const schema = templateData.template.schemaJson as FormSchema;
     
-    // Validate required fields
-    let hasError = false;
+    // Validate required fields, accounting for visibility and repeatable sections
+    let missingFields: string[] = [];
+    
     schema.sections.forEach(section => {
-      section.questions.forEach((question: any) => {
-        if (question.required) {
-          const sectionResponses = formResponses[section.id];
-          if (!sectionResponses || !sectionResponses[question.id]) {
-            hasError = true;
+      // Check if section is visible
+      const isSectionVisible = (section: any) => {
+        if (!section.controlledBy) return true;
+        
+        // Find controlling question in any section
+        for (const s of schema.sections) {
+          const controllingQuestion = s.questions.find((q: any) => 
+            q.controlsSection && q.controlledSectionId === section.id
+          );
+          
+          if (controllingQuestion) {
+            const controllerValue = formResponses[s.id]?.[controllingQuestion.id];
+            const visibleValues = controllingQuestion.visibleOnValues || [];
+            return visibleValues.includes(controllerValue);
           }
         }
-      });
+        return true;
+      };
+      
+      if (!isSectionVisible(section)) return; // Skip hidden sections
+      
+      // Handle repeatable sections - check all instances
+      const isRepeatable = section.isRepeatable;
+      const instanceCount = isRepeatable ? 
+        Object.keys(formResponses).filter(key => key.startsWith(section.id)).length || 1 
+        : 1;
+      
+      for (let instanceIndex = 0; instanceIndex < instanceCount; instanceIndex++) {
+        section.questions.forEach((question: any) => {
+          // Check if question is visible
+          const isQuestionVisible = () => {
+            if (!question.controlledBy) return true;
+            
+            const sectionKey = instanceIndex > 0 ? `${section.id}_${instanceIndex}` : section.id;
+            const controllerValue = formResponses[sectionKey]?.[question.controlledBy];
+            const visibleValues = question.visibleOnValues || [];
+            
+            return visibleValues.includes(controllerValue);
+          };
+          
+          if (!question.required || !isQuestionVisible()) return; // Skip non-required or hidden
+          
+          const sectionKey = instanceIndex > 0 ? `${section.id}_${instanceIndex}` : section.id;
+          const sectionResponses = formResponses[sectionKey];
+          
+          // Check main question response
+          if (!sectionResponses || !sectionResponses[question.id]) {
+            missingFields.push(`${section.name} - ${question.text}`);
+          }
+          
+          // For nested dropdowns, check all required levels
+          if (question.type === "dropdown" && question.nestedDropdowns) {
+            const level1 = sectionResponses?.[`${question.id}_l1`];
+            if (!level1) {
+              missingFields.push(`${section.name} - ${question.text} (Level 1)`);
+            }
+          }
+        });
+      }
     });
 
-    if (hasError) {
+    if (missingFields.length > 0) {
       toast({
         variant: "destructive",
         title: "Validation Error",
-        description: "Please fill in all required fields.",
+        description: `Please fill in all required fields: ${missingFields.slice(0, 3).join(", ")}${missingFields.length > 3 ? "..." : ""}`,
       });
       return;
     }
