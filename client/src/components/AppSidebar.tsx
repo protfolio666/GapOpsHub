@@ -1,7 +1,11 @@
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
-import { LayoutDashboard, FileText, Settings, Users, BookOpen, BarChart3, PlusCircle, ListChecks, FormInput } from "lucide-react";
-import { Link } from "wouter";
+import { LayoutDashboard, FileText, Settings, Users, BookOpen, BarChart3, PlusCircle, ListChecks, FormInput, LogOut } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import UserAvatar from "./UserAvatar";
+import { Button } from "@/components/ui/button";
+import { useMutation } from "@tanstack/react-query";
+import { authApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 interface AppSidebarProps {
   userRole: "Admin" | "Management" | "QA/Ops" | "POC";
@@ -35,6 +39,30 @@ const menuItems = {
 
 export default function AppSidebar({ userRole, userName }: AppSidebarProps) {
   const items = menuItems[userRole];
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+
+  const logoutMutation = useMutation({
+    mutationFn: () => authApi.logout(),
+    onSuccess: () => {
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+      navigate("/login");
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Logout Failed",
+        description: "Failed to log out. Please try again.",
+      });
+    },
+  });
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
 
   return (
     <Sidebar data-testid="sidebar-navigation">
@@ -65,7 +93,7 @@ export default function AppSidebar({ userRole, userName }: AppSidebarProps) {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-4 border-t">
+      <SidebarFooter className="p-4 border-t space-y-3">
         <div className="flex items-center gap-3">
           <UserAvatar name={userName} size="sm" />
           <div className="flex-1 min-w-0">
@@ -73,6 +101,16 @@ export default function AppSidebar({ userRole, userName }: AppSidebarProps) {
             <p className="text-xs text-muted-foreground">{userRole}</p>
           </div>
         </div>
+        <Button 
+          variant="outline" 
+          className="w-full" 
+          onClick={handleLogout}
+          disabled={logoutMutation.isPending}
+          data-testid="button-logout"
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          {logoutMutation.isPending ? "Logging out..." : "Logout"}
+        </Button>
       </SidebarFooter>
     </Sidebar>
   );
