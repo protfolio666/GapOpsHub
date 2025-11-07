@@ -864,6 +864,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Resolve Gap
+  app.patch("/api/gaps/:id/resolve", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Only Admin, Management, and POC can resolve gaps
+      if (!["Admin", "Management", "POC"].includes(user.role)) {
+        return res.status(403).json({ message: "Only Admin, Management, and POC can resolve gaps" });
+      }
+
+      const { resolutionSummary, resolutionAttachments } = req.body;
+
+      if (!resolutionSummary || !resolutionSummary.trim()) {
+        return res.status(400).json({ message: "Resolution summary is required" });
+      }
+
+      const gap = await storage.resolveGap(
+        Number(req.params.id),
+        resolutionSummary,
+        resolutionAttachments || []
+      );
+
+      if (!gap) {
+        return res.status(404).json({ message: "Gap not found" });
+      }
+
+      // Log audit event
+      await storage.createAuditLog({
+        userId: user.id,
+        action: "gap_resolved",
+        entityType: "gap",
+        entityId: gap.id,
+        ipAddress: req.ip || req.socket.remoteAddress || null,
+        userAgent: req.headers["user-agent"] || null,
+      });
+
+      // Send email notification to reporter
+      const reporter = await storage.getUser(gap.reporterId);
+      if (reporter && reporter.email) {
+        await sendGapResolutionEmail(
+          reporter.name,
+          reporter.email,
+          gap.gapId,
+          gap.title
+        ).catch(console.error);
+      }
+
+      return res.json({ gap });
+    } catch (error) {
+      console.error("Resolve gap error:", error);
+      return res.status(500).json({ message: "Failed to resolve gap" });
+    }
+  });
+
   // ==================== SOP ROUTES ====================
   
   app.get("/api/sops", requireAuth, async (req, res) => {

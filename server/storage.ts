@@ -31,6 +31,7 @@ export interface IStorage {
   createGap(gap: InsertGap): Promise<Gap>;
   updateGap(id: number, gap: Partial<Omit<Gap, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Gap | undefined>;
   deleteGap(id: number): Promise<boolean>;
+  resolveGap(id: number, resolutionSummary: string, resolutionAttachments: string[]): Promise<Gap | undefined>;
   
   // Comment operations
   getComment(id: number): Promise<Comment | undefined>;
@@ -178,6 +179,21 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount ? result.rowCount > 0 : false;
   }
 
+  async resolveGap(id: number, resolutionSummary: string, resolutionAttachments: string[]): Promise<Gap | undefined> {
+    const [resolvedGap] = await db
+      .update(gaps)
+      .set({ 
+        status: "Resolved",
+        resolutionSummary,
+        resolutionAttachments: resolutionAttachments as any,
+        resolvedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(gaps.id, id))
+      .returning();
+    return resolvedGap;
+  }
+
   // Comment operations
   async getComment(id: number): Promise<Comment | undefined> {
     const [comment] = await db.select().from(comments).where(eq(comments.id, id));
@@ -282,7 +298,7 @@ export class DatabaseStorage implements IStorage {
     const duplicate: InsertFormTemplate = {
       name: newName,
       description: original.description,
-      schemaJson: original.schemaJson,
+      schemaJson: original.schemaJson as any,
       visibility: original.visibility,
       department: original.department,
       version: "1.0",
@@ -290,7 +306,7 @@ export class DatabaseStorage implements IStorage {
       active: original.active,
     };
 
-    const [newTemplate] = await db.insert(formTemplates).values(duplicate).returning();
+    const [newTemplate] = await db.insert(formTemplates).values(duplicate as any).returning();
     return newTemplate;
   }
 

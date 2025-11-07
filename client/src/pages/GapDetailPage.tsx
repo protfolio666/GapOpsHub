@@ -6,7 +6,7 @@ import UserAvatar from "@/components/UserAvatar";
 import AISuggestionPanel from "@/components/AISuggestionPanel";
 import CommentThread from "@/components/CommentThread";
 import TimelineView from "@/components/TimelineView";
-import { ArrowLeft, CheckCircle, Clock, XCircle, Loader2, FileText, Paperclip } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, XCircle, Loader2, FileText, Paperclip, X, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -52,6 +52,10 @@ export default function GapDetailPage() {
   const gapId = params?.id;
   const { toast } = useToast();
   const [socket, setSocket] = useState<Socket | null>(null);
+  const [resolutionSummary, setResolutionSummary] = useState("");
+  const [resolutionAttachments, setResolutionAttachments] = useState<string[]>([]);
+  const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
+  const resolutionFileInputRef = useState<HTMLInputElement | null>(null)[0];
 
   const { data: gapData, isLoading } = useQuery<{ gap: GapWithRelations; reporter: any; assignee: any }>({
     queryKey: [`/api/gaps/${gapId}`],
@@ -79,6 +83,32 @@ export default function GapDetailPage() {
       toast({
         title: "Error",
         description: "Failed to post comment. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const resolveGapMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("PATCH", `/api/gaps/${gapId}/resolve`, {
+        resolutionSummary,
+        resolutionAttachments,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/gaps/${gapId}`] });
+      setIsResolveDialogOpen(false);
+      setResolutionSummary("");
+      setResolutionAttachments([]);
+      toast({
+        title: "Success",
+        description: "Gap has been marked as resolved.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to resolve gap. Please try again.",
         variant: "destructive",
       });
     },
@@ -321,24 +351,94 @@ export default function GapDetailPage() {
           </Card>
 
           <div className="space-y-2">
-            <Dialog>
+            <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="w-full" data-testid="button-resolve-gap">
                   <CheckCircle className="h-4 w-4 mr-2" />
                   Mark as Resolved
                 </Button>
               </DialogTrigger>
-              <DialogContent data-testid="dialog-resolve-gap">
+              <DialogContent data-testid="dialog-resolve-gap" className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Mark Gap as Resolved</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-4">
                   <div>
-                    <Label>Resolution Summary</Label>
-                    <Textarea placeholder="Describe how the gap was resolved..." rows={4} data-testid="input-resolution-summary" />
+                    <Label htmlFor="resolution-summary">Resolution Summary *</Label>
+                    <Textarea 
+                      id="resolution-summary"
+                      placeholder="Describe how the gap was resolved, actions taken, and preventive measures..." 
+                      rows={6} 
+                      value={resolutionSummary}
+                      onChange={(e) => setResolutionSummary(e.target.value)}
+                      data-testid="input-resolution-summary" 
+                    />
                   </div>
-                  <Button className="w-full" data-testid="button-confirm-resolve">
-                    Confirm Resolution
+                  <div>
+                    <Label>Supporting Documents (Optional)</Label>
+                    <Input
+                      type="file"
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        if (files) {
+                          const fileNames = Array.from(files).map(f => f.name);
+                          setResolutionAttachments(prev => [...prev, ...fileNames]);
+                        }
+                      }}
+                      multiple
+                      className="hidden"
+                      ref={(el) => {
+                        if (el) {
+                          (resolutionFileInputRef as any) = el;
+                        }
+                      }}
+                      data-testid="input-resolution-files-hidden"
+                    />
+                    <Button 
+                      variant="outline" 
+                      onClick={() => (resolutionFileInputRef as any)?.click()}
+                      className="w-full"
+                      type="button"
+                      data-testid="button-upload-resolution-docs"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Documents
+                    </Button>
+                    {resolutionAttachments.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {resolutionAttachments.map((file, idx) => (
+                          <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-muted rounded-md" data-testid={`resolution-attachment-${idx}`}>
+                            <FileText className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{file}</span>
+                            <button
+                              onClick={() => setResolutionAttachments(prev => prev.filter((_, i) => i !== idx))}
+                              className="hover:bg-muted-foreground/20 rounded-full p-1"
+                              data-testid={`button-remove-resolution-attachment-${idx}`}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <Button 
+                    className="w-full" 
+                    onClick={() => resolveGapMutation.mutate()}
+                    disabled={!resolutionSummary.trim() || resolveGapMutation.isPending}
+                    data-testid="button-confirm-resolve"
+                  >
+                    {resolveGapMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Resolving...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Confirm Resolution
+                      </>
+                    )}
                   </Button>
                 </div>
               </DialogContent>
