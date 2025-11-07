@@ -54,8 +54,8 @@ export default function AppSidebar({ userRole, userName }: AppSidebarProps) {
         description: "You have been successfully logged out.",
       });
       
-      // Navigate to login page
-      navigate("/login");
+      // Reload the page to trigger auth check and show login page
+      window.location.href = "/";
     },
     onError: () => {
       toast({
