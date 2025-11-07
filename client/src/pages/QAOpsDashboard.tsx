@@ -1,20 +1,52 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import MetricCard from "@/components/MetricCard";
 import GapCard from "@/components/GapCard";
 import { FileText, CheckCircle, BookOpen, TrendingUp } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Search } from "lucide-react";
 
 export default function QAOpsDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
-  const mockSubmissions: any[] = [];
+  const { data: metricsData, isLoading: metricsLoading } = useQuery<{
+    totalRaised: number;
+    validated: number;
+    resolved: number;
+    sopImpact: number;
+    smoothnessScore: number;
+  }>({
+    queryKey: ["/api/gaps/my/metrics"],
+  });
+
+  const { data: gapsData, isLoading: gapsLoading } = useQuery<{
+    gaps: Array<{
+      id: number;
+      gapId: string;
+      title: string;
+      description: string;
+      status: string;
+      priority: string;
+      createdAt: string;
+      reporter: { id: number; name: string; email: string } | null;
+      assignee: { id: number; name: string; email: string } | null;
+    }>;
+  }>({
+    queryKey: ["/api/gaps/my", { status: selectedStatus, search: searchQuery }],
+  });
 
   const statuses = ["All", "Assigned", "InProgress", "Resolved", "Closed"];
+  const gaps = gapsData?.gaps || [];
+  const metrics = metricsData || {
+    totalRaised: 0,
+    validated: 0,
+    resolved: 0,
+    sopImpact: 0,
+    smoothnessScore: 0,
+  };
 
   return (
     <div className="space-y-6" data-testid="page-qa-dashboard">
@@ -24,10 +56,27 @@ export default function QAOpsDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard title="Total Gaps Raised" value={28} icon={FileText} />
-        <MetricCard title="Validated Gaps" value={24} icon={CheckCircle} />
-        <MetricCard title="SOP Impact" value={8} icon={BookOpen} subtitle="Led to new SOPs" />
-        <MetricCard title="Smoothness Score" value={18.6} icon={TrendingUp} trend={{ value: 12, isPositive: true }} />
+        <MetricCard 
+          title="Total Gaps Raised" 
+          value={metricsLoading ? "..." : metrics.totalRaised} 
+          icon={FileText} 
+        />
+        <MetricCard 
+          title="Validated Gaps" 
+          value={metricsLoading ? "..." : metrics.validated} 
+          icon={CheckCircle} 
+        />
+        <MetricCard 
+          title="SOP Impact" 
+          value={metricsLoading ? "..." : metrics.sopImpact} 
+          icon={BookOpen} 
+          subtitle="Led to new SOPs" 
+        />
+        <MetricCard 
+          title="Smoothness Score" 
+          value={metricsLoading ? "..." : metrics.smoothnessScore} 
+          icon={TrendingUp} 
+        />
       </div>
 
       <Card>
@@ -61,13 +110,32 @@ export default function QAOpsDashboard() {
             ))}
           </div>
           <div className="space-y-4">
-            {mockSubmissions.map((gap) => (
-              <GapCard
-                key={gap.id}
-                {...gap}
-                onClick={() => console.log("Gap clicked:", gap.id)}
-              />
-            ))}
+            {gapsLoading ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">Loading gaps...</p>
+            ) : gaps.length === 0 ? (
+              <div className="text-center py-12">
+                <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-sm text-muted-foreground">No gaps found</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {searchQuery || selectedStatus ? "Try adjusting your filters" : "Submit your first gap to get started"}
+                </p>
+              </div>
+            ) : (
+              gaps.map((gap) => (
+                <GapCard
+                  key={gap.id}
+                  id={gap.gapId}
+                  title={gap.title}
+                  description={gap.description}
+                  status={gap.status as any}
+                  priority={gap.priority as any}
+                  reporter={gap.reporter?.name || "Unknown"}
+                  assignedTo={gap.assignee?.name}
+                  createdAt={new Date(gap.createdAt)}
+                  onClick={() => console.log("Gap clicked:", gap.gapId)}
+                />
+              ))
+            )}
           </div>
         </CardContent>
       </Card>
