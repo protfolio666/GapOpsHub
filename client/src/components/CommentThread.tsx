@@ -19,9 +19,10 @@ interface CommentThreadProps {
   comments: Comment[];
   onAddComment?: (content: string, attachments: any[]) => Promise<void>;
   isSubmitting?: boolean;
+  gapId?: number;
 }
 
-export default function CommentThread({ comments, onAddComment, isSubmitting }: CommentThreadProps) {
+export default function CommentThread({ comments, onAddComment, isSubmitting, gapId }: CommentThreadProps) {
   const [newComment, setNewComment] = useState("");
   const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -104,7 +105,11 @@ export default function CommentThread({ comments, onAddComment, isSubmitting }: 
                   {comment.attachments.map((file: any, idx) => {
                     const isFileObject = typeof file === "object" && file.path;
                     const displayName = isFileObject ? file.originalName : file;
-                    const downloadPath = isFileObject ? file.path : null;
+                    let downloadPath = isFileObject ? file.path : null;
+                    
+                    if (downloadPath && gapId) {
+                      downloadPath = `${downloadPath}?gapId=${gapId}`;
+                    }
                     
                     return (
                       <a

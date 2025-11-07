@@ -13,6 +13,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { promisify } from "util";
+import archiver from "archiver";
 
 const mkdir = promisify(fs.mkdir);
 
@@ -178,10 +179,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Download/view file endpoint
+  // Download/view file endpoint with gap authorization
   app.get("/api/files/download/:filename", requireAuth, async (req, res) => {
     try {
       const { filename } = req.params;
+      const { gapId } = req.query;
+
+      if (!gapId) {
+        return res.status(400).json({ message: "Gap ID required for file download" });
+      }
+
+      // Verify gap exists and user has access
+      const gap = await storage.getGap(Number(gapId));
+      if (!gap) {
+        return res.status(404).json({ message: "Gap not found" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Check if user can access this gap
+      const canAccess = 
+        gap.reporterId === user.id ||
+        gap.assignedToId === user.id ||
+        ["Management", "Admin", "QA/Ops"].includes(user.role);
+
+      if (!canAccess) {
+        return res.status(403).json({ message: "Access denied to this file" });
+      }
+
+      // Verify the file belongs to this gap
+      const gapAttachments = await storage.getAllGapAttachments(Number(gapId));
+      const fileExists = gapAttachments.some((att: any) => att.filename === filename);
+
+      if (!fileExists) {
+        return res.status(403).json({ message: "File does not belong to this gap" });
+      }
+
+      // Prevent path traversal
+      if (filename.includes("..") || filename.includes("/") || filename.includes("\\")) {
+        return res.status(400).json({ message: "Invalid filename" });
+      }
+
       const filePath = path.join(uploadDir, filename);
 
       if (!fs.existsSync(filePath)) {
@@ -198,6 +239,117 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("File download error:", error);
       return res.status(500).json({ message: "File download failed" });
+    }
+  });
+
+  // Download all gap attachments as zip
+  app.get("/api/gaps/:id/attachments/download", requireAuth, async (req, res) => {
+    try {
+      const gapId = Number(req.params.id);
+
+      // Verify gap exists and user has access
+      const gap = await storage.getGap(gapId);
+      if (!gap) {
+        return res.status(404).json({ message: "Gap not found" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Check if user can access this gap
+      const canAccess = 
+        gap.reporterId === user.id ||
+        gap.assignedToId === user.id ||
+        ["Management", "Admin", "QA/Ops"].includes(user.role);
+
+      if (!canAccess) {
+        return res.status(403).json({ message: "Access denied to this gap" });
+      }
+
+      // Get all attachments for this gap
+      const attachments = await storage.getAllGapAttachments(gapId);
+
+      if (attachments.length === 0) {
+        return res.status(404).json({ message: "No attachments found for this gap" });
+      }
+
+      // Size and count limits
+      const MAX_TOTAL_SIZE = 200 * 1024 * 1024; // 200MB
+      const MAX_COUNT = 100;
+
+      if (attachments.length > MAX_COUNT) {
+        return res.status(413).json({ message: `Too many attachments (max ${MAX_COUNT})` });
+      }
+
+      // Set response headers
+      res.setHeader("Content-Type", "application/zip");
+      res.setHeader("Content-Disposition", `attachment; filename="gap-${gap.gapId}-attachments.zip"`);
+
+      // Create zip archive
+      const archive = archiver("zip", {
+        zlib: { level: 9 } // Maximum compression
+      });
+
+      // Handle archive errors
+      archive.on("error", (err) => {
+        console.error("Archive error:", err);
+        if (!res.headersSent) {
+          return res.status(500).json({ message: "Failed to create archive" });
+        }
+      });
+
+      // Pipe archive to response
+      archive.pipe(res);
+
+      let totalSize = 0;
+
+      // Add each attachment to the archive
+      for (const attachment of attachments) {
+        const filename = attachment.filename;
+        
+        // Prevent path traversal
+        if (filename.includes("..") || filename.includes("/") || filename.includes("\\")) {
+          console.warn("Skipping suspicious filename:", filename);
+          continue;
+        }
+
+        const filePath = path.join(uploadDir, filename);
+
+        // Check if file exists
+        if (!fs.existsSync(filePath)) {
+          console.warn("File not found, skipping:", filePath);
+          continue;
+        }
+
+        // Check file size
+        const stats = fs.statSync(filePath);
+        totalSize += stats.size;
+
+        if (totalSize > MAX_TOTAL_SIZE) {
+          archive.destroy();
+          if (!res.headersSent) {
+            return res.status(413).json({ message: "Total attachment size exceeds limit" });
+          }
+          return;
+        }
+
+        // Add file to archive with organized folder structure
+        const folderName = attachment.source === "resolution" ? "resolution" : `comment-${attachment.sourceId}`;
+        const archivePath = `${folderName}/${attachment.originalName || filename}`;
+        
+        archive.file(filePath, { name: archivePath });
+      }
+
+      // Finalize the archive
+      await archive.finalize();
+
+    } catch (error) {
+      console.error("Bulk download error:", error);
+      if (!res.headersSent) {
+        return res.status(500).json({ message: "Failed to download attachments" });
+      }
     }
   });
 

@@ -195,6 +195,39 @@ export class DatabaseStorage implements IStorage {
     return resolvedGap;
   }
 
+  async getAllGapAttachments(gapId: number): Promise<any[]> {
+    const allAttachments: any[] = [];
+    
+    const gap = await this.getGap(gapId);
+    if (!gap) return allAttachments;
+    
+    if (gap.resolutionAttachments && Array.isArray(gap.resolutionAttachments)) {
+      gap.resolutionAttachments.forEach((attachment: any) => {
+        allAttachments.push({
+          ...attachment,
+          source: 'resolution',
+          sourceId: gap.id
+        });
+      });
+    }
+    
+    const gapComments = await this.getCommentsByGap(gapId);
+    gapComments.forEach(comment => {
+      if (comment.attachments && Array.isArray(comment.attachments)) {
+        (comment.attachments as any[]).forEach((attachment: any) => {
+          allAttachments.push({
+            ...attachment,
+            source: 'comment',
+            sourceId: comment.id,
+            commentAuthor: comment.authorId
+          });
+        });
+      }
+    });
+    
+    return allAttachments;
+  }
+
   // Comment operations
   async getComment(id: number): Promise<Comment | undefined> {
     const [comment] = await db.select().from(comments).where(eq(comments.id, id));

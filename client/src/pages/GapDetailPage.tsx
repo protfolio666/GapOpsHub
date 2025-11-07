@@ -323,8 +323,21 @@ export default function GapDetailPage() {
             </TabsContent>
             <TabsContent value="attachments" className="mt-4">
               <Card>
-                <CardHeader>
+                <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-base">Attachments</CardTitle>
+                  {attachments.length > 0 && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        window.open(`/api/gaps/${gapId}/attachments/download`, '_blank');
+                      }}
+                      data-testid="button-download-all-attachments"
+                    >
+                      <Paperclip className="h-4 w-4 mr-2" />
+                      Download All
+                    </Button>
+                  )}
                 </CardHeader>
                 <CardContent>
                   {attachments.length > 0 ? (
@@ -332,8 +345,12 @@ export default function GapDetailPage() {
                       {attachments.map((file: any, idx) => {
                         const isFileObject = typeof file === "object" && file.path;
                         const displayName = isFileObject ? file.originalName : file;
-                        const downloadPath = isFileObject ? file.path : null;
+                        let downloadPath = isFileObject ? file.path : null;
                         const isImage = isFileObject && file.mimetype?.startsWith("image/");
+                        
+                        if (downloadPath && gapId) {
+                          downloadPath = `${downloadPath}?gapId=${gapId}`;
+                        }
                         
                         return (
                           <div key={idx} className="flex items-center gap-2 p-3 bg-muted rounded-md hover-elevate" data-testid={`attachment-${idx}`}>
@@ -368,6 +385,7 @@ export default function GapDetailPage() {
                   await addCommentMutation.mutateAsync({ content, attachments });
                 }}
                 isSubmitting={addCommentMutation.isPending}
+                gapId={Number(gapId)}
               />
             </TabsContent>
           </Tabs>
