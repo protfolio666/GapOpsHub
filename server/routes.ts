@@ -123,7 +123,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
+      // Set and explicitly save session before responding
       req.session.userId = user.id;
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+      
       return res.json({ user: sanitizeUser(user) });
     } catch (error) {
       console.error("Login error:", error);
