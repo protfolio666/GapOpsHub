@@ -1,41 +1,58 @@
 import MetricCard from "@/components/MetricCard";
 import GapCard from "@/components/GapCard";
-import { ListChecks, XCircle, TrendingDown, CheckCircle } from "lucide-react";
+import { ListChecks, XCircle, TrendingDown, CheckCircle, Loader2 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
+import type { Gap } from "@shared/schema";
+
+interface GapWithReporter extends Gap {
+  reporter?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+  assignee?: {
+    id: number;
+    name: string;
+    email: string;
+  };
+}
 
 export default function POCDashboard() {
-  const mockAssignedGaps = [
-    {
-      id: "GAP-1234",
-      title: "Refund process missing customer notification",
-      description: "When processing refunds, customers are not receiving email confirmations.",
-      status: "Overdue" as const,
-      priority: "High" as const,
-      reporter: "Sarah Chen",
-      assignedTo: "Mike Torres",
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 72),
-    },
-    {
-      id: "GAP-1189",
-      title: "Inventory sync delay between warehouse and system",
-      description: "Stock levels not updating in real-time causing overselling.",
-      status: "InProgress" as const,
-      priority: "High" as const,
-      reporter: "Tom Anderson",
-      assignedTo: "Mike Torres",
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    },
-    {
-      id: "GAP-1156",
-      title: "Customer feedback form submission errors",
-      description: "Form validation preventing legitimate submissions.",
-      status: "Assigned" as const,
-      priority: "Medium" as const,
-      reporter: "Emma Davis",
-      assignedTo: "Mike Torres",
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 6),
-    },
-  ];
+  const [, navigate] = useLocation();
+
+  const { data: gapsData, isLoading } = useQuery<{ gaps: GapWithReporter[] }>({
+    queryKey: ["/api/gaps"],
+  });
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  const allGaps = gapsData?.gaps || [];
+
+  // Calculate metrics from real data
+  const assignedGaps = allGaps.filter(g => ['Assigned', 'InProgress'].includes(g.status));
+  const closedGaps = allGaps.filter(g => g.status === 'Closed');
+  const tatBreaches = allGaps.filter(g => g.status === 'Overdue' || (g.tatDeadline && new Date(g.tatDeadline) < new Date() && !['Resolved', 'Closed'].includes(g.status)));
+  const reopenedGaps = allGaps.filter(g => g.reopenedAt !== null);
+  const reopenRate = closedGaps.length > 0 ? ((reopenedGaps.length / closedGaps.length) * 100).toFixed(1) : "0.0";
+
+  // Sort by priority: Overdue first, then High priority
+  const priorityQueue = [...allGaps]
+    .filter(g => !['Closed', 'Resolved'].includes(g.status))
+    .sort((a, b) => {
+      if (a.status === 'Overdue' && b.status !== 'Overdue') return -1;
+      if (a.status !== 'Overdue' && b.status === 'Overdue') return 1;
+      if (a.priority === 'High' && b.priority !== 'High') return -1;
+      if (a.priority !== 'High' && b.priority === 'High') return 1;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
 
   return (
     <div className="space-y-6" data-testid="page-poc-dashboard">
@@ -45,10 +62,10 @@ export default function POCDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <MetricCard title="Assigned Gaps" value={12} icon={ListChecks} />
-        <MetricCard title="Closed Gaps" value={45} icon={CheckCircle} trend={{ value: 15, isPositive: true }} />
-        <MetricCard title="TAT Breaches" value={3} icon={XCircle} />
-        <MetricCard title="Reopen Rate" value="6.7%" icon={TrendingDown} subtitle="Below target" />
+        <MetricCard title="Assigned Gaps" value={assignedGaps.length} icon={ListChecks} />
+        <MetricCard title="Closed Gaps" value={closedGaps.length} icon={CheckCircle} />
+        <MetricCard title="TAT Breaches" value={tatBreaches.length} icon={XCircle} />
+        <MetricCard title="Reopen Rate" value={`${reopenRate}%`} icon={TrendingDown} subtitle={parseFloat(reopenRate) < 10 ? "Below target" : "Above target"} />
       </div>
 
       <Card>
@@ -56,13 +73,24 @@ export default function POCDashboard() {
           <CardTitle>Priority Queue</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          {mockAssignedGaps.map((gap) => (
-            <GapCard
-              key={gap.id}
-              {...gap}
-              onClick={() => console.log("Gap clicked:", gap.id)}
-            />
-          ))}
+          {priorityQueue.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No gaps assigned to you</p>
+          ) : (
+            priorityQueue.map((gap) => (
+              <GapCard
+                key={gap.id}
+                id={gap.gapId}
+                title={gap.title}
+                description={gap.description}
+                status={gap.status as any}
+                priority={gap.priority as any}
+                reporter={gap.reporter?.name || "Unknown"}
+                assignedTo={gap.assignee?.name || "Unassigned"}
+                createdAt={new Date(gap.createdAt)}
+                onClick={() => navigate(`/poc/gaps/${gap.id}`)}
+              />
+            ))
+          )}
         </CardContent>
       </Card>
     </div>

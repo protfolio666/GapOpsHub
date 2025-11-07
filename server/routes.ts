@@ -348,7 +348,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         gaps = [];
       }
 
-      return res.json({ gaps });
+      // Enrich gaps with reporter and assignee information
+      const gapsWithDetails = await Promise.all(
+        gaps.map(async (gap) => {
+          const reporter = gap.reporterId ? await storage.getUser(gap.reporterId) : null;
+          const assignee = gap.assignedToId ? await storage.getUser(gap.assignedToId) : null;
+          return {
+            ...gap,
+            reporter: reporter ? { id: reporter.id, name: reporter.name, email: reporter.email, role: reporter.role } : null,
+            assignee: assignee ? { id: assignee.id, name: assignee.name, email: assignee.email, role: assignee.role } : null,
+          };
+        })
+      );
+
+      return res.json({ gaps: gapsWithDetails });
     } catch (error) {
       console.error("Get gaps error:", error);
       return res.status(500).json({ message: "Failed to get gaps" });
