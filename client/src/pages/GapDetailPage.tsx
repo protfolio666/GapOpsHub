@@ -263,12 +263,9 @@ export default function GapDetailPage() {
     reasoning: string;
   }> : [];
 
-  // Build timeline events from gap data and sort by timestamp
+  // Build timeline events - only show events with accurate dedicated timestamps
   const timelineEvents = [
     { title: "Gap Created", timestamp: new Date(gap.createdAt), completed: true },
-    gap.aiProcessed && { title: "AI Review Completed", timestamp: new Date(gap.updatedAt), completed: true },
-    gap.assignedToId && { title: "Assigned to POC", timestamp: new Date(gap.updatedAt), completed: true },
-    (gap.status === "InProgress" || gap.status === "Resolved" || gap.status === "Closed") && { title: "In Progress", timestamp: new Date(gap.updatedAt), completed: true },
     gap.resolvedAt && { title: "Resolved", timestamp: new Date(gap.resolvedAt), completed: true },
     gap.reopenedAt && { title: "Reopened", timestamp: new Date(gap.reopenedAt), completed: true },
     gap.closedAt && { title: "Closed", timestamp: new Date(gap.closedAt), completed: true },
@@ -337,7 +334,7 @@ export default function GapDetailPage() {
                       <div>
                         <h4 className="text-sm font-medium mb-2">Supporting Documents</h4>
                         <div className="space-y-2">
-                          {gap.resolutionAttachments.map((file: any, idx) => {
+                          {(gap.resolutionAttachments as any[]).map((file: any, idx: number) => {
                             const isFileObject = typeof file === "object" && file.path;
                             const displayName = isFileObject ? file.originalName : file;
                             let downloadPath = isFileObject ? file.path : null;
