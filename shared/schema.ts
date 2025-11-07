@@ -42,6 +42,7 @@ export const gaps = pgTable("gaps", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   aiProcessed: boolean("ai_processed").default(false),
   attachments: jsonb("attachments").default([]),
+  sopSuggestions: jsonb("sop_suggestions"),
 });
 
 export const insertGapSchema = createInsertSchema(gaps).omit({ 

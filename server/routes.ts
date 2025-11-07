@@ -513,14 +513,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log gap creation
       await logGapCreation(req.session.userId!, gap.id, { title, description, department, priority }, req);
 
-      // Calculate similarity with existing gaps using OpenRouter AI
+      // Calculate similarity with existing gaps and suggest SOPs using OpenRouter AI
       // Run asynchronously to not block response
       setImmediate(async () => {
         try {
-          const allGaps = await storage.getAllGaps();
+          // Run similarity detection and SOP suggestion in parallel
+          const [allGaps, allSOPs] = await Promise.all([
+            storage.getAllGaps(),
+            storage.getAllSops()
+          ]);
+
           const otherGaps = allGaps.filter(g => g.id !== gap.id && g.status !== "Closed");
-          const similarGaps = await findSimilarGapsWithAI(gap, otherGaps, 60);
+          const activeSOPs = allSOPs.filter(sop => sop.active);
+
+          // Run both AI operations in parallel
+          const [similarGaps, sopSuggestions] = await Promise.all([
+            findSimilarGapsWithAI(gap, otherGaps, 60),
+            suggestSOPsWithAI(gap, activeSOPs.map(sop => ({
+              id: sop.id,
+              title: sop.title,
+              description: sop.description || undefined,
+              content: sop.content
+            })))
+          ]);
           
+          // Store similar gaps
           for (const { gap: similarGap, score } of similarGaps) {
             // Store bidirectional similarity for better lookup
             await storage.createSimilarGap({
@@ -536,9 +553,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
           }
 
+          // Update gap with SOP suggestions and mark as processed
           await storage.updateGap(gap.id, { 
             aiProcessed: true,
-            status: "NeedsReview" 
+            status: "NeedsReview",
+            sopSuggestions: sopSuggestions as any
           });
         } catch (error) {
           console.error("AI processing error:", error);
