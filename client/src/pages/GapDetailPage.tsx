@@ -463,13 +463,14 @@ export default function GapDetailPage() {
               </Button>
             )}
             
-            <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="w-full" data-testid="button-resolve-gap">
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Mark as Resolved
-                </Button>
-              </DialogTrigger>
+            {userData?.user && ["Management", "Admin"].includes(userData.user.role) && (
+              <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button className="w-full" data-testid="button-resolve-gap">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Mark as Resolved
+                  </Button>
+                </DialogTrigger>
               <DialogContent data-testid="dialog-resolve-gap" className="max-w-2xl">
                 <DialogHeader>
                   <DialogTitle>Mark Gap as Resolved</DialogTitle>
@@ -550,7 +551,10 @@ export default function GapDetailPage() {
                 </div>
               </DialogContent>
             </Dialog>
-            <Dialog>
+            )}
+            
+            {userData?.user && gap?.assignedToId === userData.user.id && (
+              <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" className="w-full" data-testid="button-request-extension">
                   <Clock className="h-4 w-4 mr-2" />
@@ -576,6 +580,8 @@ export default function GapDetailPage() {
                 </div>
               </DialogContent>
             </Dialog>
+            )}
+            
             {userData?.user && ["Management", "QA/Ops", "Admin"].includes(userData.user.role) && 
              gap && (gap.status === "Closed" || gap.status === "Resolved") && (
               <Button 
