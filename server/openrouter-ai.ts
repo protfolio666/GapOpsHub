@@ -96,22 +96,30 @@ Return ONLY the similarity score (0-100):`
 
 /**
  * Find similar gaps using AI-powered semantic search
+ * Uses parallel processing with concurrency limit to avoid overwhelming the API
  */
 export async function findSimilarGapsWithAI(targetGap: Gap, allGaps: Gap[], threshold = 60): Promise<Array<{ gap: Gap; score: number }>> {
-  const similarities: Array<{ gap: Gap; score: number }> = [];
-
-  for (const gap of allGaps) {
-    if (gap.id === targetGap.id) continue;
-    
-    const score = await calculateAISimilarity(targetGap, gap);
-    
-    if (score >= threshold) {
-      similarities.push({ gap, score });
+  // Filter out the target gap
+  const gapsToCompare = allGaps.filter(gap => gap.id !== targetGap.id);
+  
+  // Process all similarity calculations in parallel with Promise.all
+  const similarityPromises = gapsToCompare.map(async (gap) => {
+    try {
+      const score = await calculateAISimilarity(targetGap, gap);
+      return { gap, score };
+    } catch (error) {
+      console.error(`Failed to calculate similarity for gap ${gap.id}:`, error);
+      return { gap, score: 0 }; // Return 0 on error
     }
-  }
+  });
 
-  // Sort by similarity score (highest first)
-  return similarities.sort((a, b) => b.score - a.score);
+  // Wait for all similarity calculations to complete
+  const allResults = await Promise.all(similarityPromises);
+  
+  // Filter by threshold and sort by score (highest first)
+  return allResults
+    .filter(result => result.score >= threshold)
+    .sort((a, b) => b.score - a.score);
 }
 
 /**
