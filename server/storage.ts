@@ -28,7 +28,7 @@ export interface IStorage {
   getGapsByReporter(reporterId: number): Promise<Gap[]>;
   getGapsByAssignee(assignedToId: number): Promise<Gap[]>;
   createGap(gap: InsertGap): Promise<Gap>;
-  updateGap(id: number, gap: Partial<InsertGap>): Promise<Gap | undefined>;
+  updateGap(id: number, gap: Partial<Omit<Gap, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Gap | undefined>;
   deleteGap(id: number): Promise<boolean>;
   
   // Comment operations
@@ -158,7 +158,7 @@ export class DatabaseStorage implements IStorage {
     return newGap;
   }
 
-  async updateGap(id: number, gap: Partial<InsertGap>): Promise<Gap | undefined> {
+  async updateGap(id: number, gap: Partial<Omit<Gap, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Gap | undefined> {
     const [updatedGap] = await db
       .update(gaps)
       .set({ ...gap, updatedAt: new Date() })

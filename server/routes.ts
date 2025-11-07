@@ -3,7 +3,10 @@ import { createServer, type Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import { authenticateUser, createUser, hashPassword, requireAuth, requireRole, attachUser, sanitizeUser } from "./auth";
-import { calculateSimilarity, findSimilarGaps } from "./ai-similarity";
+import { findSimilarGapsWithAI, suggestSOPsWithAI } from "./openrouter-ai";
+import { sendGapAssignmentEmail, sendGapResolutionEmail, sendTATExtensionRequestEmail } from "./email-service";
+import { logGapCreation, logGapAssignment, logGapStatusChange, logUserLogin, logUserLogout } from "./audit-logger";
+import type { Gap } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 
@@ -143,6 +146,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       });
       
+      // Log successful login
+      await logUserLogin(user.id, user.email, req);
+      
       return res.json({ user: sanitizeUser(user) });
     } catch (error) {
       console.error("Login error:", error);
@@ -179,7 +185,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/auth/logout", (req, res) => {
+  app.post("/api/auth/logout", async (req, res) => {
+    const userId = req.session.userId;
+    
+    // Log logout before destroying session
+    if (userId) {
+      await logUserLogout(userId, req);
+    }
+    
     req.session.destroy((err) => {
       if (err) {
         return res.status(500).json({ message: "Logout failed" });
@@ -290,7 +303,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const { status } = req.query;
-      let gaps;
+      let gaps: Gap[] = [];
 
       // RBAC: Filter gaps based on user role
       if (user.role === "Admin" || user.role === "Management") {
@@ -398,33 +411,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         templateVersion: templateVersion || null,
         formResponsesJson: formResponsesJson || null,
         tatDeadline: null,
-        resolvedAt: null,
-        closedAt: null,
-        reopenedAt: null,
         status: "PendingAI",
         aiProcessed: false,
         attachments: attachments || [],
       });
 
-      // Calculate similarity with existing gaps (AI processing)
+      // Log gap creation
+      await logGapCreation(req.session.userId!, gap.id, { title, description, department, priority }, req);
+
+      // Calculate similarity with existing gaps using OpenRouter AI
       // Run asynchronously to not block response
       setImmediate(async () => {
         try {
           const allGaps = await storage.getAllGaps();
-          const similarGaps = await findSimilarGaps(gap, allGaps);
+          const otherGaps = allGaps.filter(g => g.id !== gap.id && g.status !== "Closed");
+          const similarGaps = await findSimilarGapsWithAI(gap, otherGaps, 60);
           
-          for (const similar of similarGaps) {
+          for (const { gap: similarGap, score } of similarGaps) {
             // Store bidirectional similarity for better lookup
             await storage.createSimilarGap({
               gapId: gap.id,
-              similarGapId: similar.gapId,
-              similarityScore: similar.score,
+              similarGapId: similarGap.id,
+              similarityScore: score,
             });
             // Also store reverse relationship
             await storage.createSimilarGap({
-              gapId: similar.gapId,
+              gapId: similarGap.id,
               similarGapId: gap.id,
-              similarityScore: similar.score,
+              similarityScore: score,
             });
           }
 
@@ -434,6 +448,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         } catch (error) {
           console.error("AI processing error:", error);
+          // Still mark as needs review even if AI fails
+          await storage.updateGap(gap.id, { 
+            aiProcessed: true,
+            status: "NeedsReview" 
+          });
         }
       });
 
@@ -460,19 +479,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           try {
             await storage.deleteSimilarGapsByGapId(gap.id);
             const allGaps = await storage.getAllGaps();
-            const similarGaps = await findSimilarGaps(gap, allGaps);
+            const otherGaps = allGaps.filter(g => g.id !== gap.id && g.status !== "Closed");
+            const similarGaps = await findSimilarGapsWithAI(gap, otherGaps, 60);
             
-            for (const similar of similarGaps) {
+            for (const { gap: similarGap, score } of similarGaps) {
               await storage.createSimilarGap({
                 gapId: gap.id,
-                similarGapId: similar.gapId,
-                similarityScore: similar.score,
+                similarGapId: similarGap.id,
+                similarityScore: score,
               });
               // Also store reverse relationship
               await storage.createSimilarGap({
-                gapId: similar.gapId,
+                gapId: similarGap.id,
                 similarGapId: gap.id,
-                similarityScore: similar.score,
+                similarityScore: score,
               });
             }
           } catch (error) {
@@ -519,6 +539,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         notes: notes || null,
       });
 
+      // Log assignment
+      await logGapAssignment(req.session.userId!, gap.id, assignedToId, req);
+
+      // Send email notification to assignee
+      const assignee = await storage.getUser(assignedToId);
+      if (assignee) {
+        await sendGapAssignmentEmail(
+          assignee.name,
+          assignee.email,
+          gap.gapId,
+          gap.title,
+          gap.priority,
+          gap.tatDeadline || undefined
+        );
+      }
+
       return res.json({ gap });
     } catch (error) {
       console.error("Assign gap error:", error);
@@ -563,6 +599,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
           content: `**Resolution:** ${resolutionSummary}`,
           attachments: [],
         });
+      }
+
+      // Log status change
+      await logGapStatusChange(req.session.userId!, gap.id, existingGap.status, "Resolved", req);
+
+      // Send email notification to reporter
+      const reporter = await storage.getUser(gap.reporterId);
+      if (reporter) {
+        await sendGapResolutionEmail(
+          reporter.name,
+          reporter.email,
+          gap.gapId,
+          gap.title
+        );
       }
 
       return res.json({ gap });

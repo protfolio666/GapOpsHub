@@ -43,6 +43,30 @@ function getClientIp(req: Request): string {
 }
 
 /**
+ * Sanitize request body to remove sensitive data before logging
+ */
+function sanitizeBody(body: any, path: string): any {
+  if (!body || typeof body !== 'object') return body;
+  
+  const sanitized = { ...body };
+  
+  // Never log passwords or tokens
+  const sensitiveFields = ['password', 'token', 'secret', 'apiKey', 'api_key'];
+  sensitiveFields.forEach(field => {
+    if (field in sanitized) {
+      sanitized[field] = '[REDACTED]';
+    }
+  });
+  
+  // For login/auth endpoints, only log the email
+  if (path.includes('/auth/login') || path.includes('/auth/register')) {
+    return { email: sanitized.email };
+  }
+  
+  return sanitized;
+}
+
+/**
  * Audit middleware to log all requests
  */
 export function auditMiddleware(req: Request, res: any, next: any) {
@@ -70,7 +94,7 @@ export function auditMiddleware(req: Request, res: any, next: any) {
         action,
         entityType: extractEntityType(req.path),
         entityId: extractEntityId(req.path),
-        changes: req.method !== "GET" ? req.body : null,
+        changes: req.method !== "GET" ? sanitizeBody(req.body, req.path) : null,
         req,
       });
     }
