@@ -1,6 +1,13 @@
 import { storage } from "./storage";
-import type { User } from "@shared/schema";
+import type { User, PublicUser } from "@shared/schema";
 import type { Request, Response, NextFunction } from "express";
+import bcrypt from "bcryptjs";
+
+// Sanitize user object by removing password hash
+export function sanitizeUser(user: User): PublicUser {
+  const { passwordHash, ...publicUser } = user;
+  return publicUser;
+}
 
 // Extend Express Request to include user
 declare global {
@@ -11,24 +18,32 @@ declare global {
   }
 }
 
-export async function authenticateUser(email: string): Promise<User | null> {
+export async function authenticateUser(email: string, password: string): Promise<User | null> {
   const user = await storage.getUserByEmail(email);
-  return user || null;
-}
-
-export async function createOrGetUser(email: string, name: string, role: string): Promise<User> {
-  let user = await storage.getUserByEmail(email);
   
-  if (!user) {
-    user = await storage.createUser({
-      email,
-      name,
-      role,
-      department: null,
-    });
+  if (!user || !user.passwordHash) {
+    return null;
   }
   
-  return user;
+  const isValid = await bcrypt.compare(password, user.passwordHash);
+  return isValid ? user : null;
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  const saltRounds = 10;
+  return bcrypt.hash(password, saltRounds);
+}
+
+export async function createUser(email: string, name: string, password: string, role: string): Promise<User> {
+  const passwordHash = await hashPassword(password);
+  
+  return storage.createUser({
+    email,
+    name,
+    role,
+    department: null,
+    passwordHash,
+  });
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {

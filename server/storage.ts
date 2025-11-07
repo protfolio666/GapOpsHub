@@ -70,6 +70,7 @@ export interface IStorage {
   // Similar Gap operations
   getSimilarGaps(gapId: number, minScore?: number): Promise<SimilarGap[]>;
   createSimilarGap(similarGap: InsertSimilarGap): Promise<SimilarGap>;
+  deleteSimilarGapsByGapId(gapId: number): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -84,8 +85,8 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
-  async createUser(user: InsertUser): Promise<User> {
-    const [newUser] = await db.insert(users).values(user).returning();
+  async createUser(user: Omit<InsertUser, 'passwordHash'> & { passwordHash: string }): Promise<User> {
+    const [newUser] = await db.insert(users).values(user as any).returning();
     return newUser;
   }
 
@@ -312,6 +313,13 @@ export class DatabaseStorage implements IStorage {
   async createSimilarGap(similarGap: InsertSimilarGap): Promise<SimilarGap> {
     const [newSimilarGap] = await db.insert(similarGaps).values(similarGap).returning();
     return newSimilarGap;
+  }
+
+  async deleteSimilarGapsByGapId(gapId: number): Promise<boolean> {
+    const result = await db.delete(similarGaps).where(
+      or(eq(similarGaps.gapId, gapId), eq(similarGaps.similarGapId, gapId))
+    );
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 }
 

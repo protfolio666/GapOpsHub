@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -15,14 +15,9 @@ import GapDetailPage from "@/pages/GapDetailPage";
 import GapSubmissionForm from "@/pages/GapSubmissionForm";
 import FormBuilder from "@/components/FormBuilder";
 import NotFound from "@/pages/not-found";
-
-type UserRole = "Admin" | "Management" | "QA/Ops" | "POC";
-
-interface User {
-  email: string;
-  name: string;
-  role: UserRole;
-}
+import type { User } from "@shared/schema";
+import { authApi } from "@/lib/api";
+import { useToast } from "@/hooks/use-toast";
 
 function Router({ user }: { user: User }) {
   const roleRoutes = {
@@ -34,7 +29,7 @@ function Router({ user }: { user: User }) {
 
   return (
     <Switch>
-      <Route path={roleRoutes[user.role]} component={
+      <Route path={roleRoutes[user.role as keyof typeof roleRoutes]} component={
         user.role === "Management" ? ManagementDashboard :
         user.role === "POC" ? POCDashboard :
         user.role === "QA/Ops" ? QAOpsDashboard :
@@ -63,25 +58,69 @@ function Router({ user }: { user: User }) {
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [, setLocation] = useLocation();
+  const { toast } = useToast();
 
-  const handleLogin = (email: string, role: string) => {
-    const name = email.split("@")[0].split(".").map(n => 
-      n.charAt(0).toUpperCase() + n.slice(1)
-    ).join(" ");
-    
-    const userRole = role as UserRole;
-    setUser({ email, name, role: userRole });
-    
-    const roleRoutes = {
-      Admin: "/admin",
-      Management: "/management",
-      "QA/Ops": "/qa",
-      POC: "/poc",
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await authApi.getMe();
+        setUser(response.user);
+      } catch (error) {
+        // Not logged in, that's okay
+      } finally {
+        setLoading(false);
+      }
     };
-    
-    setLocation(roleRoutes[userRole]);
+
+    checkAuth();
+  }, []);
+
+  const handleLogin = async (email: string, role: string) => {
+    try {
+      const name = email.split("@")[0].split(".").map(n => 
+        n.charAt(0).toUpperCase() + n.slice(1)
+      ).join(" ");
+      
+      const response = await authApi.login(email, name, role);
+      setUser(response.user);
+      
+      const roleRoutes = {
+        Admin: "/admin",
+        Management: "/management",
+        "QA/Ops": "/qa",
+        POC: "/poc",
+      };
+      
+      setLocation(roleRoutes[role as keyof typeof roleRoutes]);
+      
+      toast({
+        title: "Logged in successfully",
+        description: `Welcome back, ${response.user.name}!`,
+      });
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Login failed",
+        description: "Unable to log in. Please try again.",
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center mb-4 mx-auto">
+            <span className="text-primary-foreground font-bold text-sm">GO</span>
+          </div>
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (
@@ -104,7 +143,7 @@ function App() {
       <TooltipProvider>
         <SidebarProvider style={sidebarStyle as React.CSSProperties}>
           <div className="flex h-screen w-full">
-            <AppSidebar userRole={user.role} userName={user.name} />
+            <AppSidebar userRole={user.role as any} userName={user.name} />
             <div className="flex flex-col flex-1 overflow-hidden">
               <Header notificationCount={3} />
               <main className="flex-1 overflow-auto">

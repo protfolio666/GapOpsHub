@@ -8,12 +8,16 @@ export const users = pgTable("users", {
   name: varchar("name", { length: 255 }).notNull(),
   role: varchar("role", { length: 50 }).notNull(), // Admin, Management, QA/Ops, POC
   department: varchar("department", { length: 100 }),
+  passwordHash: varchar("password_hash", { length: 255 }),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true, passwordHash: true });
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+// Public user type that excludes sensitive fields
+export type PublicUser = Omit<User, 'passwordHash'>;
 
 export const gaps = pgTable("gaps", {
   id: serial("id").primaryKey(),
@@ -41,14 +45,17 @@ export const insertGapSchema = createInsertSchema(gaps).omit({
   createdAt: true, 
   updatedAt: true,
   gapId: true,
+  resolvedAt: true,
+  closedAt: true,
+  reopenedAt: true,
 });
 export type InsertGap = z.infer<typeof insertGapSchema>;
 export type Gap = typeof gaps.$inferSelect;
 
 export const comments = pgTable("comments", {
   id: serial("id").primaryKey(),
-  gapId: integer("gap_id").references(() => gaps.id).notNull(),
-  authorId: integer("author_id").references(() => users.id).notNull(),
+  gapId: integer("gap_id").references(() => gaps.id, { onDelete: "cascade" }).notNull(),
+  authorId: integer("author_id").references(() => users.id, { onDelete: "cascade" }).notNull(),
   content: text("content").notNull(),
   attachments: jsonb("attachments").default([]),
   createdAt: timestamp("created_at").defaultNow().notNull(),
@@ -103,7 +110,7 @@ export type FormTemplate = typeof formTemplates.$inferSelect;
 
 export const formFields = pgTable("form_fields", {
   id: serial("id").primaryKey(),
-  templateId: integer("template_id").references(() => formTemplates.id).notNull(),
+  templateId: integer("template_id").references(() => formTemplates.id, { onDelete: "cascade" }).notNull(),
   fieldType: varchar("field_type", { length: 50 }).notNull(), // text, textarea, select, multiselect, file
   label: text("label").notNull(),
   required: boolean("required").default(false),
@@ -126,7 +133,7 @@ export const gapAssignments = pgTable("gap_assignments", {
 
 export const insertGapAssignmentSchema = createInsertSchema(gapAssignments).omit({ 
   id: true, 
-  assignedAt: true 
+  assignedAt: true,
 });
 export type InsertGapAssignment = z.infer<typeof insertGapAssignmentSchema>;
 export type GapAssignment = typeof gapAssignments.$inferSelect;
@@ -152,8 +159,8 @@ export type TatExtension = typeof tatExtensions.$inferSelect;
 
 export const similarGaps = pgTable("similar_gaps", {
   id: serial("id").primaryKey(),
-  gapId: integer("gap_id").references(() => gaps.id).notNull(),
-  similarGapId: integer("similar_gap_id").references(() => gaps.id).notNull(),
+  gapId: integer("gap_id").references(() => gaps.id, { onDelete: "cascade" }).notNull(),
+  similarGapId: integer("similar_gap_id").references(() => gaps.id, { onDelete: "cascade" }).notNull(),
   similarityScore: integer("similarity_score").notNull(), // 0-100
   calculatedAt: timestamp("calculated_at").defaultNow().notNull(),
 }, (table) => ({

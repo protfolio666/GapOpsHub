@@ -35,8 +35,9 @@ function calculateIDF(documents: string[][]): TFIDFVector {
 
   const allTerms = new Set<string>();
   documents.forEach((doc) => doc.forEach((term) => allTerms.add(term)));
+  const termsArray = Array.from(allTerms);
 
-  for (const term of allTerms) {
+  for (const term of termsArray) {
     const docsWithTerm = documents.filter((doc) => doc.includes(term)).length;
     idf[term] = Math.log(totalDocs / (1 + docsWithTerm));
   }
@@ -56,12 +57,13 @@ function calculateTFIDF(tf: TFIDFVector, idf: TFIDFVector): TFIDFVector {
 
 function cosineSimilarity(vec1: TFIDFVector, vec2: TFIDFVector): number {
   const allTerms = new Set([...Object.keys(vec1), ...Object.keys(vec2)]);
+  const termsArray = Array.from(allTerms);
 
   let dotProduct = 0;
   let mag1 = 0;
   let mag2 = 0;
 
-  for (const term of allTerms) {
+  for (const term of termsArray) {
     const val1 = vec1[term] || 0;
     const val2 = vec2[term] || 0;
 

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
-import { createOrGetUser, requireAuth, requireRole, attachUser } from "./auth";
+import { authenticateUser, createUser, hashPassword, requireAuth, requireRole, attachUser, sanitizeUser } from "./auth";
 import { calculateSimilarity, findSimilarGaps } from "./ai-similarity";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -11,26 +11,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // WebSocket setup for real-time comments
   const io = new SocketIOServer(httpServer, {
     cors: {
-      origin: "*",
+      origin: process.env.NODE_ENV === "production" ? process.env.FRONTEND_URL || "https://yourdomain.com" : "*",
       methods: ["GET", "POST"],
+      credentials: true,
     },
   });
 
-  io.on("connection", (socket) => {
-    console.log("Client connected to WebSocket");
+  // WebSocket authentication using session
+  io.engine.use((req: any, res: any, next: any) => {
+    const isHandshake = req._query && req._query.sid === undefined;
+    if (!isHandshake) return next();
+    
+    // Find and run session middleware, properly awaiting it
+    const sessionLayer = (app as any)._router.stack.find(
+      (layer: any) => layer.name === 'session'
+    );
+    
+    if (sessionLayer) {
+      sessionLayer.handle(req, res, next);
+    } else {
+      next();
+    }
+  });
 
-    socket.on("join-gap", (gapId: string) => {
-      socket.join(`gap-${gapId}`);
-      console.log(`Client joined gap room: ${gapId}`);
+  io.use(async (socket: any, next) => {
+    const req = socket.request;
+    
+    // Check if session exists and has authenticated user
+    if (!req.session || !req.session.userId) {
+      return next(new Error("Unauthorized - No valid session"));
+    }
+
+    // Verify user exists
+    const user = await storage.getUser(req.session.userId);
+    if (!user) {
+      return next(new Error("Unauthorized - User not found"));
+    }
+
+    socket.userId = user.id;
+    socket.userRole = user.role;
+    next();
+  });
+
+  io.on("connection", (socket: any) => {
+    console.log(`User ${socket.userId} connected to WebSocket`);
+
+    socket.on("join-gap", async (gapId: string) => {
+      try {
+        const gap = await storage.getGap(Number(gapId));
+        if (!gap) {
+          socket.emit("error", { message: "Gap not found" });
+          return;
+        }
+
+        // Verify user has access to this gap
+        const user = await storage.getUser(socket.userId);
+        if (!user) {
+          socket.emit("error", { message: "Unauthorized" });
+          return;
+        }
+
+        // Allow if user is: reporter, assignee, or Management/Admin/QA
+        const hasAccess =
+          gap.reporterId === user.id ||
+          gap.assignedToId === user.id ||
+          ["Management", "Admin", "QA/Ops"].includes(user.role);
+
+        if (!hasAccess) {
+          socket.emit("error", { message: "Access denied to this gap" });
+          return;
+        }
+
+        socket.join(`gap-${gapId}`);
+        console.log(`User ${socket.userId} joined gap room: ${gapId}`);
+      } catch (error) {
+        console.error("Error joining gap room:", error);
+        socket.emit("error", { message: "Failed to join gap room" });
+      }
     });
 
     socket.on("leave-gap", (gapId: string) => {
       socket.leave(`gap-${gapId}`);
-      console.log(`Client left gap room: ${gapId}`);
+      console.log(`User ${socket.userId} left gap room: ${gapId}`);
     });
 
     socket.on("disconnect", () => {
-      console.log("Client disconnected from WebSocket");
+      console.log(`User ${socket.userId} disconnected from WebSocket`);
     });
   });
 
@@ -44,19 +110,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/auth/login", async (req, res) => {
     try {
-      const { email, name, role } = req.body;
+      const { email, password } = req.body;
       
-      if (!email || !role) {
-        return res.status(400).json({ message: "Email and role are required" });
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
       }
 
-      const user = await createOrGetUser(email, name, role);
-      req.session.userId = user.id;
+      // Authenticate user with password verification
+      const user = await authenticateUser(email, password);
+      
+      if (!user) {
+        return res.status(401).json({ message: "Invalid email or password" });
+      }
 
-      return res.json({ user });
+      req.session.userId = user.id;
+      return res.json({ user: sanitizeUser(user) });
     } catch (error) {
       console.error("Login error:", error);
       return res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  // Registration endpoint for creating new users (Admin only)
+  app.post("/api/auth/register", requireRole("Admin"), async (req, res) => {
+    try {
+      const { email, name, password, role } = req.body;
+      
+      if (!email || !password || !name || !role) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      // Verify user doesn't already exist
+      const existingUser = await storage.getUserByEmail(email);
+      if (existingUser) {
+        return res.status(400).json({ message: "User already exists" });
+      }
+
+      // Validate role
+      const validRoles = ["Admin", "Management", "QA/Ops", "POC"];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({ message: "Invalid role" });
+      }
+
+      const user = await createUser(email, name, password, role);
+      return res.json({ user: sanitizeUser(user) });
+    } catch (error) {
+      console.error("Registration error:", error);
+      return res.status(500).json({ message: "Registration failed" });
     }
   });
 
@@ -80,7 +180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      return res.json({ user });
+      return res.json({ user: sanitizeUser(user) });
     } catch (error) {
       console.error("Get current user error:", error);
       return res.status(500).json({ message: "Failed to get user" });
@@ -92,7 +192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/users", requireAuth, async (req, res) => {
     try {
       const users = await storage.getAllUsers();
-      return res.json({ users });
+      return res.json({ users: users.map(sanitizeUser) });
     } catch (error) {
       console.error("Get users error:", error);
       return res.status(500).json({ message: "Failed to get users" });
@@ -103,7 +203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { role } = req.params;
       const users = await storage.getUsersByRole(role);
-      return res.json({ users });
+      return res.json({ users: users.map(sanitizeUser) });
     } catch (error) {
       console.error("Get users by role error:", error);
       return res.status(500).json({ message: "Failed to get users" });
@@ -141,14 +241,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Gap not found" });
       }
 
-      // Get reporter and assignee info
+      // Get reporter and assignee info (sanitized)
       const reporter = await storage.getUser(gap.reporterId);
       const assignee = gap.assignedToId ? await storage.getUser(gap.assignedToId) : null;
 
       return res.json({ 
         gap,
-        reporter,
-        assignee
+        reporter: reporter ? sanitizeUser(reporter) : null,
+        assignee: assignee ? sanitizeUser(assignee) : null
       });
     } catch (error) {
       console.error("Get gap error:", error);
@@ -182,15 +282,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       // Calculate similarity with existing gaps (AI processing)
-      setTimeout(async () => {
+      // Run asynchronously to not block response
+      setImmediate(async () => {
         try {
           const allGaps = await storage.getAllGaps();
           const similarGaps = await findSimilarGaps(gap, allGaps);
           
           for (const similar of similarGaps) {
+            // Store bidirectional similarity for better lookup
             await storage.createSimilarGap({
               gapId: gap.id,
               similarGapId: similar.gapId,
+              similarityScore: similar.score,
+            });
+            // Also store reverse relationship
+            await storage.createSimilarGap({
+              gapId: similar.gapId,
+              similarGapId: gap.id,
               similarityScore: similar.score,
             });
           }
@@ -202,7 +310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } catch (error) {
           console.error("AI processing error:", error);
         }
-      }, 100);
+      });
 
       return res.json({ gap });
     } catch (error) {
@@ -213,9 +321,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/gaps/:id", requireAuth, async (req, res) => {
     try {
+      // If title or description changed, invalidate similarity cache
+      const hasContentChange = req.body.title || req.body.description;
+      
       const gap = await storage.updateGap(Number(req.params.id), req.body);
       if (!gap) {
         return res.status(404).json({ message: "Gap not found" });
+      }
+
+      // Invalidate and recompute similarities if content changed
+      if (hasContentChange) {
+        setImmediate(async () => {
+          try {
+            await storage.deleteSimilarGapsByGapId(gap.id);
+            const allGaps = await storage.getAllGaps();
+            const similarGaps = await findSimilarGaps(gap, allGaps);
+            
+            for (const similar of similarGaps) {
+              await storage.createSimilarGap({
+                gapId: gap.id,
+                similarGapId: similar.gapId,
+                similarityScore: similar.score,
+              });
+              // Also store reverse relationship
+              await storage.createSimilarGap({
+                gapId: similar.gapId,
+                similarGapId: gap.id,
+                similarityScore: similar.score,
+              });
+            }
+          } catch (error) {
+            console.error("Similarity recomputation error:", error);
+          }
+        });
       }
 
       return res.json({ gap });
@@ -231,6 +369,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!assignedToId) {
         return res.status(400).json({ message: "Assignee is required" });
+      }
+
+      // Verify gap exists and user has permission
+      const existingGap = await storage.getGap(Number(req.params.id));
+      if (!existingGap) {
+        return res.status(404).json({ message: "Gap not found" });
       }
 
       const gap = await storage.updateGap(Number(req.params.id), {
@@ -261,6 +405,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { resolutionSummary } = req.body;
 
+      // Verify gap exists and user is assignee or has management role
+      const existingGap = await storage.getGap(Number(req.params.id));
+      if (!existingGap) {
+        return res.status(404).json({ message: "Gap not found" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Only assignee or Management/Admin can resolve
+      if (existingGap.assignedToId !== user.id && !["Management", "Admin"].includes(user.role)) {
+        return res.status(403).json({ message: "Only the assigned POC or Management can resolve this gap" });
+      }
+
       const gap = await storage.updateGap(Number(req.params.id), {
         status: "Resolved",
         resolvedAt: new Date(),
@@ -289,6 +449,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/gaps/:id/reopen", requireAuth, async (req, res) => {
     try {
+      // Verify gap exists and user has permission
+      const existingGap = await storage.getGap(Number(req.params.id));
+      if (!existingGap) {
+        return res.status(404).json({ message: "Gap not found" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Only reporter, assignee, or Management/Admin can reopen
+      if (
+        existingGap.reporterId !== user.id &&
+        existingGap.assignedToId !== user.id &&
+        !["Management", "Admin"].includes(user.role)
+      ) {
+        return res.status(403).json({ message: "Only the reporter, assignee, or Management can reopen this gap" });
+      }
+
       const gap = await storage.updateGap(Number(req.params.id), {
         status: "Reopened",
         reopenedAt: new Date(),
@@ -333,13 +513,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const comments = await storage.getCommentsByGap(Number(req.params.gapId));
       
-      // Get author info for each comment
+      // Get author info for each comment (sanitized)
       const detailedComments = await Promise.all(
         comments.map(async (comment) => {
           const author = await storage.getUser(comment.authorId);
           return {
             ...comment,
-            author,
+            author: author ? sanitizeUser(author) : null,
           };
         })
       );
@@ -367,15 +547,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       const author = await storage.getUser(comment.authorId);
+      const sanitizedAuthor = author ? sanitizeUser(author) : null;
 
-      // Emit real-time comment via WebSocket
+      // Emit real-time comment via WebSocket (sanitized)
       const io = (app as any).io as SocketIOServer;
       io.to(`gap-${req.params.gapId}`).emit("new-comment", {
         ...comment,
-        author,
+        author: sanitizedAuthor,
       });
 
-      return res.json({ comment: { ...comment, author } });
+      return res.json({ comment: { ...comment, author: sanitizedAuthor } });
     } catch (error) {
       console.error("Create comment error:", error);
       return res.status(500).json({ message: "Failed to create comment" });
