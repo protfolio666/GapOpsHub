@@ -80,6 +80,17 @@ export default {
           away: "rgb(245 158 11)",
           busy: "rgb(239 68 68)",
           offline: "rgb(156 163 175)",
+          pending: "hsl(220 13% 60%)",
+          assigned: "hsl(221 83% 53%)",
+          inprogress: "hsl(41 96% 48%)",
+          overdue: "hsl(0 84% 60%)",
+          resolved: "hsl(142 76% 36%)",
+          closed: "hsl(220 13% 70%)",
+        },
+        priority: {
+          high: "hsl(0 84% 60%)",
+          medium: "hsl(41 96% 48%)",
+          low: "hsl(220 13% 60%)",
         },
       },
       fontFamily: {

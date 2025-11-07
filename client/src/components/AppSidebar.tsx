@@ -1,0 +1,78 @@
+import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
+import { LayoutDashboard, FileText, Settings, Users, BookOpen, BarChart3, PlusCircle, ListChecks } from "lucide-react";
+import { Link } from "wouter";
+import UserAvatar from "./UserAvatar";
+
+interface AppSidebarProps {
+  userRole: "Admin" | "Management" | "QA/Ops" | "POC";
+  userName: string;
+}
+
+const menuItems = {
+  Admin: [
+    { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
+    { title: "Users & Roles", url: "/admin/users", icon: Users },
+    { title: "SOPs", url: "/admin/sops", icon: BookOpen },
+    { title: "Reports", url: "/admin/reports", icon: BarChart3 },
+    { title: "Settings", url: "/admin/settings", icon: Settings },
+  ],
+  Management: [
+    { title: "Dashboard", url: "/management", icon: LayoutDashboard },
+    { title: "All Gaps", url: "/management/gaps", icon: FileText },
+    { title: "Form Builder", url: "/management/forms", icon: PlusCircle },
+    { title: "Reports", url: "/management/reports", icon: BarChart3 },
+  ],
+  "QA/Ops": [
+    { title: "My Submissions", url: "/qa", icon: ListChecks },
+    { title: "Submit Gap", url: "/qa/new", icon: PlusCircle },
+  ],
+  POC: [
+    { title: "Assigned Gaps", url: "/poc", icon: ListChecks },
+    { title: "My Performance", url: "/poc/performance", icon: BarChart3 },
+  ],
+};
+
+export default function AppSidebar({ userRole, userName }: AppSidebarProps) {
+  const items = menuItems[userRole];
+
+  return (
+    <Sidebar data-testid="sidebar-navigation">
+      <SidebarHeader className="p-4 border-b">
+        <div className="flex items-center gap-2">
+          <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-sm">GO</span>
+          </div>
+          <span className="font-semibold text-lg">GapOps</span>
+        </div>
+      </SidebarHeader>
+      <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-xs uppercase tracking-wide px-2">{userRole}</SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {items.map((item) => (
+                <SidebarMenuItem key={item.title}>
+                  <SidebarMenuButton asChild>
+                    <Link href={item.url} data-testid={`link-${item.title.toLowerCase().replace(/\s+/g, '-')}`}>
+                      <item.icon className="h-4 w-4" />
+                      <span>{item.title}</span>
+                    </Link>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
+      <SidebarFooter className="p-4 border-t">
+        <div className="flex items-center gap-3">
+          <UserAvatar name={userName} size="sm" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium truncate">{userName}</p>
+            <p className="text-xs text-muted-foreground">{userRole}</p>
+          </div>
+        </div>
+      </SidebarFooter>
+    </Sidebar>
+  );
+}
