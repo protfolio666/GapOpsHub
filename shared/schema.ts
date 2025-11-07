@@ -152,6 +152,24 @@ export const insertGapAssignmentSchema = createInsertSchema(gapAssignments).omit
 export type InsertGapAssignment = z.infer<typeof insertGapAssignmentSchema>;
 export type GapAssignment = typeof gapAssignments.$inferSelect;
 
+export const gapPocs = pgTable("gap_pocs", {
+  id: serial("id").primaryKey(),
+  gapId: integer("gap_id").references(() => gaps.id, { onDelete: "cascade" }).notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  addedById: integer("added_by_id").references(() => users.id).notNull(),
+  addedAt: timestamp("added_at").defaultNow().notNull(),
+  isPrimary: boolean("is_primary").default(false),
+}, (table) => ({
+  uniqueGapUser: unique().on(table.gapId, table.userId),
+}));
+
+export const insertGapPocSchema = createInsertSchema(gapPocs).omit({ 
+  id: true, 
+  addedAt: true,
+});
+export type InsertGapPoc = z.infer<typeof insertGapPocSchema>;
+export type GapPoc = typeof gapPocs.$inferSelect;
+
 export const tatExtensions = pgTable("tat_extensions", {
   id: serial("id").primaryKey(),
   gapId: integer("gap_id").references(() => gaps.id).notNull(),

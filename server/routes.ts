@@ -927,66 +927,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/gaps/:id/resolve", requireAuth, async (req, res) => {
-    try {
-      const { resolutionSummary } = req.body;
-
-      // Verify gap exists and user is assignee or has management role
-      const existingGap = await storage.getGap(Number(req.params.id));
-      if (!existingGap) {
-        return res.status(404).json({ message: "Gap not found" });
-      }
-
-      const user = await storage.getUser(req.session.userId!);
-      if (!user) {
-        return res.status(401).json({ message: "User not found" });
-      }
-
-      // Only assignee or Management/Admin can resolve
-      if (existingGap.assignedToId !== user.id && !["Management", "Admin"].includes(user.role)) {
-        return res.status(403).json({ message: "Only the assigned POC or Management can resolve this gap" });
-      }
-
-      const gap = await storage.updateGap(Number(req.params.id), {
-        status: "Resolved",
-        resolvedAt: new Date(),
-      });
-
-      if (!gap) {
-        return res.status(404).json({ message: "Gap not found" });
-      }
-
-      // Add resolution as a comment
-      if (resolutionSummary && req.session.userId) {
-        await storage.createComment({
-          gapId: gap.id,
-          authorId: req.session.userId,
-          content: `**Resolution:** ${resolutionSummary}`,
-          attachments: [],
-        });
-      }
-
-      // Log status change
-      await logGapStatusChange(req.session.userId!, gap.id, existingGap.status, "Resolved", req);
-
-      // Send email notification to reporter
-      const reporter = await storage.getUser(gap.reporterId);
-      if (reporter) {
-        await sendGapResolutionEmail(
-          reporter.name,
-          reporter.email,
-          gap.gapId,
-          gap.title
-        );
-      }
-
-      return res.json({ gap });
-    } catch (error) {
-      console.error("Resolve gap error:", error);
-      return res.status(500).json({ message: "Failed to resolve gap" });
-    }
-  });
-
   app.post("/api/gaps/:id/reopen", requireAuth, async (req, res) => {
     try {
       // Verify gap exists and user has permission
