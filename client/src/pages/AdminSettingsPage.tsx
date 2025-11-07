@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -28,6 +29,8 @@ interface SystemSettings {
 export default function AdminSettingsPage() {
   const { toast } = useToast();
   const [selectedModel, setSelectedModel] = useState<string>("");
+  const [useCustomModel, setUseCustomModel] = useState(false);
+  const [customModelName, setCustomModelName] = useState("");
 
   const { data: settings, isLoading } = useQuery<{ settings: SystemSettings }>({
     queryKey: ["/api/admin/settings"],
@@ -61,17 +64,19 @@ export default function AdminSettingsPage() {
   });
 
   const handleSaveSettings = () => {
-    if (!selectedModel) {
+    const modelToSave = useCustomModel ? customModelName : selectedModel;
+    
+    if (!modelToSave) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "Please select an OpenRouter model.",
+        description: useCustomModel ? "Please enter a custom model name." : "Please select an OpenRouter model.",
       });
       return;
     }
 
     updateSettingsMutation.mutate({
-      openrouterModel: selectedModel,
+      openrouterModel: modelToSave,
     });
   };
 
@@ -107,39 +112,87 @@ export default function AdminSettingsPage() {
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="openrouter-model">OpenRouter Model</Label>
-              <Select
-                value={selectedModel || currentModel}
-                onValueChange={setSelectedModel}
-              >
-                <SelectTrigger id="openrouter-model" data-testid="select-openrouter-model">
-                  <SelectValue placeholder="Select AI model" />
-                </SelectTrigger>
-                <SelectContent>
-                  {OPENROUTER_MODELS.map((model) => (
-                    <SelectItem key={model.value} value={model.value}>
-                      {model.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              
+              {/* Toggle between preset and custom */}
+              <div className="flex items-center gap-2 mb-3">
+                <Button
+                  type="button"
+                  variant={!useCustomModel ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setUseCustomModel(false)}
+                  data-testid="button-preset-models"
+                >
+                  Preset Models
+                </Button>
+                <Button
+                  type="button"
+                  variant={useCustomModel ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setUseCustomModel(true)}
+                  data-testid="button-custom-model"
+                >
+                  Custom Model
+                </Button>
+              </div>
+
+              {!useCustomModel ? (
+                <Select
+                  value={selectedModel || currentModel}
+                  onValueChange={setSelectedModel}
+                >
+                  <SelectTrigger id="openrouter-model" data-testid="select-openrouter-model">
+                    <SelectValue placeholder="Select AI model" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {OPENROUTER_MODELS.map((model) => (
+                      <SelectItem key={model.value} value={model.value}>
+                        {model.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Input
+                  id="custom-model"
+                  placeholder="e.g., openai/gpt-4-turbo, anthropic/claude-3-opus"
+                  value={customModelName}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomModelName(e.target.value)}
+                  data-testid="input-custom-model"
+                />
+              )}
+              
               <p className="text-sm text-muted-foreground">
                 Current: {OPENROUTER_MODELS.find(m => m.value === currentModel)?.label || currentModel}
               </p>
             </div>
 
             <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-              <h4 className="font-medium text-sm">Model Recommendations:</h4>
-              <ul className="text-sm text-muted-foreground space-y-1">
-                <li>• <strong>GPT-4 Turbo:</strong> Best accuracy for similarity detection (recommended for production)</li>
-                <li>• <strong>GPT-3.5 Turbo:</strong> Fast and cost-effective, good for high-volume usage</li>
-                <li>• <strong>Llama 3.1 70B:</strong> Open-source alternative with good performance</li>
-                <li>• <strong>Llama 3.1 8B (Free):</strong> Free tier, suitable for testing</li>
-              </ul>
+              <h4 className="font-medium text-sm">
+                {useCustomModel ? "Custom Model Examples:" : "Model Recommendations:"}
+              </h4>
+              {useCustomModel ? (
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• <strong>openai/gpt-4-turbo</strong> - Latest GPT-4 Turbo</li>
+                  <li>• <strong>anthropic/claude-3-opus</strong> - Claude's most powerful model</li>
+                  <li>• <strong>google/gemini-pro-1.5</strong> - Latest Gemini Pro</li>
+                  <li>• <strong>meta-llama/llama-3.2-90b-vision-instruct</strong> - Llama with vision</li>
+                  <li className="pt-2 border-t border-border mt-2">
+                    Find all models at: <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">openrouter.ai/models</a>
+                  </li>
+                </ul>
+              ) : (
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• <strong>GPT-4 Turbo:</strong> Best accuracy for similarity detection (recommended for production)</li>
+                  <li>• <strong>GPT-3.5 Turbo:</strong> Fast and cost-effective, good for high-volume usage</li>
+                  <li>• <strong>Llama 3.1 70B:</strong> Open-source alternative with good performance</li>
+                  <li>• <strong>Llama 3.1 8B (Free):</strong> Free tier, suitable for testing</li>
+                </ul>
+              )}
             </div>
 
             <Button
               onClick={handleSaveSettings}
-              disabled={updateSettingsMutation.isPending || !selectedModel}
+              disabled={updateSettingsMutation.isPending || (!useCustomModel && !selectedModel) || (useCustomModel && !customModelName)}
               data-testid="button-save-settings"
             >
               {updateSettingsMutation.isPending ? (
