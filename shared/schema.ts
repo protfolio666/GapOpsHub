@@ -93,7 +93,10 @@ export const formTemplates = pgTable("form_templates", {
   id: serial("id").primaryKey(),
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
+  schemaJson: jsonb("schema_json").notNull(), // Stores the complete form structure with sections, questions, conditional logic
+  visibility: varchar("visibility", { length: 50 }).default("all"), // all, specific_department
   department: varchar("department", { length: 100 }),
+  version: varchar("version", { length: 20 }).default("1.0"),
   createdById: integer("created_by_id").references(() => users.id).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),

@@ -52,6 +52,8 @@ export interface IStorage {
   getActiveFormTemplates(): Promise<FormTemplate[]>;
   createFormTemplate(template: InsertFormTemplate): Promise<FormTemplate>;
   updateFormTemplate(id: number, template: Partial<InsertFormTemplate>): Promise<FormTemplate | undefined>;
+  deleteFormTemplate(id: number): Promise<boolean>;
+  duplicateFormTemplate(id: number, newName: string, userId: number): Promise<FormTemplate>;
   
   // Form Field operations
   getFormFieldsByTemplate(templateId: number): Promise<FormField[]>;
@@ -252,6 +254,32 @@ export class DatabaseStorage implements IStorage {
       .where(eq(formTemplates.id, id))
       .returning();
     return updatedTemplate;
+  }
+
+  async deleteFormTemplate(id: number): Promise<boolean> {
+    await db.delete(formTemplates).where(eq(formTemplates.id, id));
+    return true;
+  }
+
+  async duplicateFormTemplate(id: number, newName: string, userId: number): Promise<FormTemplate> {
+    const original = await this.getFormTemplate(id);
+    if (!original) {
+      throw new Error("Template not found");
+    }
+
+    const duplicate: InsertFormTemplate = {
+      name: newName,
+      description: original.description,
+      schemaJson: original.schemaJson,
+      visibility: original.visibility,
+      department: original.department,
+      version: "1.0",
+      createdById: userId,
+      active: original.active,
+    };
+
+    const [newTemplate] = await db.insert(formTemplates).values(duplicate).returning();
+    return newTemplate;
   }
 
   // Form Field operations
