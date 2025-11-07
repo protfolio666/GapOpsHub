@@ -1,4 +1,4 @@
-import { db } from "@db";
+import { db } from "./db";
 import { 
   users, gaps, comments, sops, formTemplates, formFields, 
   gapAssignments, tatExtensions, similarGaps,
