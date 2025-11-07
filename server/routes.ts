@@ -159,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Registration endpoint for creating new users (Admin only)
   app.post("/api/auth/register", requireRole("Admin"), async (req, res) => {
     try {
-      const { email, name, password, role } = req.body;
+      const { email, name, password, role, department, employeeId } = req.body;
       
       if (!email || !password || !name || !role) {
         return res.status(400).json({ message: "All fields are required" });
@@ -171,13 +171,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "User already exists" });
       }
 
+      // Check if employeeId is unique (if provided)
+      if (employeeId) {
+        const existingEmployeeId = await storage.getUserByEmployeeId(employeeId);
+        if (existingEmployeeId) {
+          return res.status(400).json({ message: "Employee ID already exists" });
+        }
+      }
+
       // Validate role
       const validRoles = ["Admin", "Management", "QA/Ops", "POC"];
       if (!validRoles.includes(role)) {
         return res.status(400).json({ message: "Invalid role" });
       }
 
-      const user = await createUser(email, name, password, role);
+      const user = await createUser(email, name, password, role, department, employeeId);
       return res.json({ user: sanitizeUser(user) });
     } catch (error) {
       console.error("Registration error:", error);

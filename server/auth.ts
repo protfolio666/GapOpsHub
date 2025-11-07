@@ -34,14 +34,22 @@ export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, saltRounds);
 }
 
-export async function createUser(email: string, name: string, password: string, role: string): Promise<User> {
+export async function createUser(
+  email: string, 
+  name: string, 
+  password: string, 
+  role: string,
+  department?: string | null,
+  employeeId?: string | null
+): Promise<User> {
   const passwordHash = await hashPassword(password);
   
   return storage.createUser({
     email,
     name,
     role,
-    department: null,
+    department: department || null,
+    employeeId: employeeId || null,
     passwordHash,
   });
 }
