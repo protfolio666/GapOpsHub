@@ -355,6 +355,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get gaps reported by current user
+  app.get("/api/gaps/my", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const { status, search } = req.query;
+      let gaps = await storage.getGapsByReporter(user.id);
+
+      if (status && status !== 'All') {
+        gaps = gaps.filter(g => g.status === status);
+      }
+
+      if (search && typeof search === 'string') {
+        const searchLower = search.toLowerCase();
+        gaps = gaps.filter(g => 
+          g.title.toLowerCase().includes(searchLower) ||
+          g.description.toLowerCase().includes(searchLower) ||
+          g.gapId.toLowerCase().includes(searchLower)
+        );
+      }
+
+      const gapsWithDetails = await Promise.all(
+        gaps.map(async (gap) => {
+          const reporter = gap.reporterId ? await storage.getUser(gap.reporterId) : null;
+          const assignee = gap.assignedToId ? await storage.getUser(gap.assignedToId) : null;
+          return {
+            ...gap,
+            reporter: reporter ? { id: reporter.id, name: reporter.name, email: reporter.email } : null,
+            assignee: assignee ? { id: assignee.id, name: assignee.name, email: assignee.email } : null,
+          };
+        })
+      );
+
+      return res.json({ gaps: gapsWithDetails });
+    } catch (error) {
+      console.error("Get my gaps error:", error);
+      return res.status(500).json({ message: "Failed to get gaps" });
+    }
+  });
+
+  // Get metrics for current user's gaps
+  app.get("/api/gaps/my/metrics", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const gaps = await storage.getGapsByReporter(user.id);
+      
+      const totalRaised = gaps.length;
+      const validated = gaps.filter(g => ['Assigned', 'InProgress', 'Resolved', 'Closed'].includes(g.status)).length;
+      const resolved = gaps.filter(g => ['Resolved', 'Closed'].includes(g.status)).length;
+      
+      const allSops = await storage.getAllSops();
+      const sopImpact = allSops.filter(sop => 
+        gaps.some(gap => gap.id === sop.linkedGapId)
+      ).length;
+
+      const smoothnessScore = totalRaised > 0 ? (validated / totalRaised) * 100 : 0;
+
+      return res.json({
+        totalRaised,
+        validated,
+        resolved,
+        sopImpact,
+        smoothnessScore: parseFloat(smoothnessScore.toFixed(1)),
+      });
+    } catch (error) {
+      console.error("Get metrics error:", error);
+      return res.status(500).json({ message: "Failed to get metrics" });
+    }
+  });
+
   app.get("/api/gaps/:id", requireAuth, async (req, res) => {
     try {
       const gap = await storage.getGap(Number(req.params.id));
