@@ -20,6 +20,7 @@ import type { PublicUser } from "@shared/schema";
 // Validation schemas
 const createUserSchema = z.object({
   email: z.string().email("Invalid email address"),
+  employeeId: z.string().optional(),
   name: z.string().min(1, "Name is required"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   role: z.enum(["Admin", "Management", "QA/Ops", "POC"]),
@@ -28,6 +29,7 @@ const createUserSchema = z.object({
 
 const updateUserSchema = z.object({
   email: z.string().email("Invalid email address"),
+  employeeId: z.string().optional(),
   name: z.string().min(1, "Name is required"),
   password: z.string().min(8, "Password must be at least 8 characters").optional().or(z.literal("")),
   role: z.enum(["Admin", "Management", "QA/Ops", "POC"]),
@@ -48,6 +50,7 @@ export default function UserManagementPage() {
     resolver: zodResolver(createUserSchema),
     defaultValues: {
       email: "",
+      employeeId: "",
       name: "",
       password: "",
       role: "QA/Ops",
@@ -59,6 +62,7 @@ export default function UserManagementPage() {
     resolver: zodResolver(updateUserSchema),
     defaultValues: {
       email: "",
+      employeeId: "",
       name: "",
       password: "",
       role: "QA/Ops",
@@ -140,6 +144,7 @@ export default function UserManagementPage() {
     setSelectedUser(user);
     updateForm.reset({
       email: user.email,
+      employeeId: user.employeeId || "",
       name: user.name,
       password: "",
       role: user.role as "Admin" | "Management" | "QA/Ops" | "POC",
@@ -153,6 +158,7 @@ export default function UserManagementPage() {
     
     const updates: any = {
       email: data.email,
+      employeeId: data.employeeId || null,
       name: data.name,
       role: data.role,
       department: data.department || null,
@@ -213,6 +219,7 @@ export default function UserManagementPage() {
                 <TableRow>
                   <TableHead>Name</TableHead>
                   <TableHead>Email</TableHead>
+                  <TableHead>Employee ID</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Department</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
@@ -223,6 +230,7 @@ export default function UserManagementPage() {
                   <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
                     <TableCell className="font-medium">{user.name}</TableCell>
                     <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.employeeId || "-"}</TableCell>
                     <TableCell>
                       <Badge variant={getRoleBadgeVariant(user.role)}>
                         {user.role}
@@ -282,11 +290,24 @@ export default function UserManagementPage() {
               <FormField
                 control={createForm.control}
                 name="email"
-                render={({ field }) => (
+                render={({ field}) => (
                   <FormItem>
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input {...field} type="email" placeholder="john@company.com" data-testid="input-email" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={createForm.control}
+                name="employeeId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Employee ID (Optional, must be unique)</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="EMP-12345" data-testid="input-employee-id" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -384,6 +405,19 @@ export default function UserManagementPage() {
                     <FormLabel>Email</FormLabel>
                     <FormControl>
                       <Input {...field} type="email" data-testid="input-edit-email" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={updateForm.control}
+                name="employeeId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Employee ID (Optional, must be unique)</FormLabel>
+                    <FormControl>
+                      <Input {...field} placeholder="EMP-12345" data-testid="input-edit-employee-id" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
