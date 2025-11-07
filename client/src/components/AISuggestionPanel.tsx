@@ -10,20 +10,20 @@ interface SimilarGap {
 }
 
 interface SOPSuggestion {
-  id: string;
+  sopId: number;
   title: string;
-  confidence: number;
-  link: string;
+  relevanceScore: number;
+  reasoning: string;
 }
 
 interface AISuggestionPanelProps {
   similarGaps: SimilarGap[];
-  suggestedSOP?: SOPSuggestion;
-  onApplySOP?: () => void;
+  suggestedSOPs?: SOPSuggestion[];
+  onApplySOP?: (sopId: number) => void;
   onViewGap?: (id: string) => void;
 }
 
-export default function AISuggestionPanel({ similarGaps, suggestedSOP, onApplySOP, onViewGap }: AISuggestionPanelProps) {
+export default function AISuggestionPanel({ similarGaps, suggestedSOPs, onApplySOP, onViewGap }: AISuggestionPanelProps) {
   return (
     <Card className="border-2 border-primary/20" data-testid="panel-ai-suggestions">
       <CardHeader>
@@ -59,29 +59,38 @@ export default function AISuggestionPanel({ similarGaps, suggestedSOP, onApplySO
           </div>
         )}
 
-        {suggestedSOP && (
+        {suggestedSOPs && suggestedSOPs.length > 0 && (
           <div>
-            <h4 className="text-sm font-medium mb-2">Suggested SOP</h4>
-            <div className="p-4 rounded-md bg-primary/5 border border-primary/20">
-              <div className="flex items-start justify-between gap-2 mb-3">
-                <div>
-                  <span className="font-mono text-xs text-muted-foreground">{suggestedSOP.id}</span>
-                  <h5 className="text-sm font-medium mt-1">{suggestedSOP.title}</h5>
+            <h4 className="text-sm font-medium mb-2">Suggested SOPs</h4>
+            <div className="space-y-2">
+              {suggestedSOPs.map((sop) => (
+                <div
+                  key={sop.sopId}
+                  className="p-3 rounded-md bg-primary/5 border border-primary/20"
+                  data-testid={`suggested-sop-${sop.sopId}`}
+                >
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div className="flex-1 min-w-0">
+                      <span className="font-mono text-xs text-muted-foreground">SOP-{sop.sopId}</span>
+                      <h5 className="text-sm font-medium mt-1">{sop.title}</h5>
+                    </div>
+                    <Badge className="bg-primary text-primary-foreground shrink-0">
+                      {sop.relevanceScore}%
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground mb-3">{sop.reasoning}</p>
+                  <div className="flex gap-2">
+                    <Button size="sm" onClick={() => onApplySOP?.(sop.sopId)} data-testid={`button-apply-sop-${sop.sopId}`}>
+                      Apply SOP
+                    </Button>
+                    <Button size="sm" variant="outline" asChild>
+                      <a href={`/admin/sops/${sop.sopId}`} data-testid={`link-view-sop-${sop.sopId}`}>
+                        View <ExternalLink className="h-3 w-3 ml-1" />
+                      </a>
+                    </Button>
+                  </div>
                 </div>
-                <Badge className="bg-primary text-primary-foreground">
-                  {suggestedSOP.confidence}% confidence
-                </Badge>
-              </div>
-              <div className="flex gap-2">
-                <Button size="sm" onClick={onApplySOP} data-testid="button-apply-sop">
-                  Apply SOP
-                </Button>
-                <Button size="sm" variant="outline" asChild>
-                  <a href={suggestedSOP.link} target="_blank" rel="noopener noreferrer" data-testid="link-view-sop">
-                    View <ExternalLink className="h-3 w-3 ml-1" />
-                  </a>
-                </Button>
-              </div>
+              ))}
             </div>
           </div>
         )}

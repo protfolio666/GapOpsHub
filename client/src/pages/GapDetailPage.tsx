@@ -136,13 +136,15 @@ export default function GapDetailPage() {
               { id: "GAP-1145", title: "Refund process automation missing", similarity: 87 },
               { id: "GAP-0892", title: "Customer notification gaps", similarity: 78 },
             ]}
-            suggestedSOP={{
-              id: "SOP-21",
-              title: "Standard Refund Processing Procedure",
-              confidence: 92,
-              link: "#",
-            }}
-            onApplySOP={() => console.log("Apply SOP")}
+            suggestedSOPs={[
+              {
+                sopId: 21,
+                title: "Standard Refund Processing Procedure",
+                relevanceScore: 92,
+                reasoning: "This SOP directly addresses refund notification procedures and customer communication protocols.",
+              },
+            ]}
+            onApplySOP={(sopId) => console.log("Apply SOP:", sopId)}
             onViewGap={(id) => console.log("View gap:", id)}
           />
 
