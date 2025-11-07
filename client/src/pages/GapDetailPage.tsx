@@ -6,14 +6,15 @@ import UserAvatar from "@/components/UserAvatar";
 import AISuggestionPanel from "@/components/AISuggestionPanel";
 import CommentThread from "@/components/CommentThread";
 import TimelineView from "@/components/TimelineView";
-import { ArrowLeft, CheckCircle, Clock, XCircle, Loader2, FileText, Paperclip, X, Upload } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, XCircle, Loader2, FileText, Paperclip, X, Upload, UserPlus, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { useEffect, useState, useRef } from "react";
@@ -21,6 +22,25 @@ import { io, Socket } from "socket.io-client";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { Gap, Comment } from "@shared/schema";
+
+interface GapPoc {
+  id: number;
+  gapId: number;
+  userId: number;
+  addedById: number;
+  addedAt: string;
+  isPrimary: boolean;
+  user: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+  };
+  addedBy: {
+    id: number;
+    name: string;
+  };
+}
 
 interface GapWithRelations extends Gap {
   reporter?: {
@@ -56,12 +76,14 @@ export default function GapDetailPage() {
   const [resolutionFiles, setResolutionFiles] = useState<File[]>([]);
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
   const resolutionFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isAddPocDialogOpen, setIsAddPocDialogOpen] = useState(false);
+  const [selectedPocId, setSelectedPocId] = useState<string>("");
 
   const { data: userData } = useQuery<{ user: any }>({
     queryKey: ["/api/auth/me"],
   });
 
-  const { data: gapData, isLoading } = useQuery<{ gap: GapWithRelations; reporter: any; assignee: any }>({
+  const { data: gapData, isLoading } = useQuery<{ gap: GapWithRelations; reporter: any; assignee: any; pocs: GapPoc[] }>({
     queryKey: [`/api/gaps/${gapId}`],
     enabled: !!gapId,
   });
@@ -183,6 +205,53 @@ export default function GapDetailPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to reopen gap.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Query all POC users for the add POC dialog
+  const { data: pocUsersData } = useQuery<{ users: any[] }>({
+    queryKey: ["/api/users", { role: "POC" }],
+  });
+
+  const addPocMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      return await apiRequest("POST", `/api/gaps/${gapId}/pocs`, { userId, isPrimary: false });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/gaps/${gapId}`] });
+      setIsAddPocDialogOpen(false);
+      setSelectedPocId("");
+      toast({
+        title: "Success",
+        description: "POC has been added to this gap.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add POC.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removePocMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      return await apiRequest("DELETE", `/api/gaps/${gapId}/pocs/${userId}`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/gaps/${gapId}`] });
+      toast({
+        title: "Success",
+        description: "POC has been removed from this gap.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove POC.",
         variant: "destructive",
       });
     },
@@ -460,13 +529,79 @@ export default function GapDetailPage() {
                   <Separator />
                 </>
               )}
-              {assignee && (
+              {(gapData?.pocs && gapData.pocs.length > 0) && (
                 <>
                   <div>
-                    <p className="text-xs font-medium text-muted-foreground uppercase mb-1">Assigned To</p>
-                    <div className="flex items-center gap-2">
-                      <UserAvatar name={assignee.name} size="sm" />
-                      <span className="text-sm">{assignee.name}</span>
+                    <div className="flex items-center justify-between mb-1">
+                      <p className="text-xs font-medium text-muted-foreground uppercase">Assigned POCs</p>
+                      {userData?.user && (["Admin", "Management"].includes(userData.user.role) || gapData.pocs.some(p => p.userId === userData.user.id)) && (
+                        <Dialog open={isAddPocDialogOpen} onOpenChange={setIsAddPocDialogOpen}>
+                          <DialogTrigger asChild>
+                            <Button variant="ghost" size="sm" data-testid="button-add-poc">
+                              <UserPlus className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Add POC</DialogTitle>
+                              <DialogDescription>
+                                Select a POC to assign to this gap. The POC will have full access to view, comment, and resolve the gap.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="space-y-4 py-4">
+                              <div>
+                                <Label htmlFor="poc-select">Select POC</Label>
+                                <Select value={selectedPocId} onValueChange={setSelectedPocId}>
+                                  <SelectTrigger id="poc-select" data-testid="select-poc">
+                                    <SelectValue placeholder="Choose a POC" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {pocUsersData?.users.filter(u => !gapData.pocs.some(p => p.userId === u.id)).map((user) => (
+                                      <SelectItem key={user.id} value={String(user.id)}>
+                                        {user.name} ({user.employeeId})
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <DialogFooter>
+                              <Button 
+                                onClick={() => {
+                                  if (selectedPocId) {
+                                    addPocMutation.mutate(Number(selectedPocId));
+                                  }
+                                }}
+                                disabled={!selectedPocId || addPocMutation.isPending}
+                                data-testid="button-confirm-add-poc"
+                              >
+                                {addPocMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                                Add POC
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      )}
+                    </div>
+                    <div className="space-y-2">
+                      {gapData.pocs.map((poc) => (
+                        <div key={poc.id} className="flex items-center gap-2">
+                          <UserAvatar name={poc.user.name} size="sm" />
+                          <span className="text-sm flex-1">{poc.user.name}</span>
+                          {poc.isPrimary && <Badge variant="secondary" className="text-xs">Primary</Badge>}
+                          {userData?.user && (["Admin", "Management"].includes(userData.user.role) || poc.userId === userData.user.id) && !poc.isPrimary && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => removePocMutation.mutate(poc.userId)}
+                              disabled={removePocMutation.isPending}
+                              data-testid={`button-remove-poc-${poc.userId}`}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          )}
+                        </div>
+                      ))}
                     </div>
                   </div>
                   <Separator />

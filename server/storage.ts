@@ -1,12 +1,13 @@
 import { db } from "./db";
 import { 
   users, gaps, comments, sops, formTemplates, formFields, 
-  gapAssignments, tatExtensions, similarGaps, auditLogs,
+  gapAssignments, tatExtensions, similarGaps, auditLogs, gapPocs,
   type User, type InsertUser, type Gap, type InsertGap,
   type Comment, type InsertComment, type Sop, type InsertSop,
   type FormTemplate, type InsertFormTemplate, type FormField, type InsertFormField,
   type GapAssignment, type InsertGapAssignment, type TatExtension, type InsertTatExtension,
-  type SimilarGap, type InsertSimilarGap, type AuditLog, type InsertAuditLog
+  type SimilarGap, type InsertSimilarGap, type AuditLog, type InsertAuditLog,
+  type GapPoc, type InsertGapPoc, type PublicUser
 } from "@shared/schema";
 import { eq, desc, and, sql, or } from "drizzle-orm";
 
@@ -67,6 +68,12 @@ export interface IStorage {
   // Gap Assignment operations
   getAssignmentsByGap(gapId: number): Promise<GapAssignment[]>;
   createGapAssignment(assignment: InsertGapAssignment): Promise<GapAssignment>;
+  
+  // Gap POC operations
+  getGapPocs(gapId: number): Promise<Array<GapPoc & { user: PublicUser }>>;
+  addGapPoc(poc: InsertGapPoc): Promise<GapPoc>;
+  removeGapPoc(gapId: number, userId: number): Promise<boolean>;
+  isUserAssignedPoc(gapId: number, userId: number): Promise<boolean>;
   
   // TAT Extension operations
   getExtensionsByGap(gapId: number): Promise<TatExtension[]>;
@@ -379,6 +386,63 @@ export class DatabaseStorage implements IStorage {
   async createGapAssignment(assignment: InsertGapAssignment): Promise<GapAssignment> {
     const [newAssignment] = await db.insert(gapAssignments).values(assignment).returning();
     return newAssignment;
+  }
+
+  // Gap POC operations
+  async getGapPocs(gapId: number): Promise<Array<GapPoc & { user: PublicUser }>> {
+    const pocs = await db
+      .select({
+        id: gapPocs.id,
+        gapId: gapPocs.gapId,
+        userId: gapPocs.userId,
+        addedById: gapPocs.addedById,
+        addedAt: gapPocs.addedAt,
+        isPrimary: gapPocs.isPrimary,
+        user: {
+          id: users.id,
+          email: users.email,
+          employeeId: users.employeeId,
+          name: users.name,
+          role: users.role,
+          department: users.department,
+          createdAt: users.createdAt,
+        }
+      })
+      .from(gapPocs)
+      .leftJoin(users, eq(gapPocs.userId, users.id))
+      .where(eq(gapPocs.gapId, gapId))
+      .orderBy(desc(gapPocs.isPrimary), gapPocs.addedAt);
+    
+    return pocs as Array<GapPoc & { user: PublicUser }>;
+  }
+
+  async addGapPoc(poc: InsertGapPoc): Promise<GapPoc> {
+    const [newPoc] = await db.insert(gapPocs).values(poc).returning();
+    return newPoc;
+  }
+
+  async removeGapPoc(gapId: number, userId: number): Promise<boolean> {
+    const result = await db.delete(gapPocs).where(
+      and(
+        eq(gapPocs.gapId, gapId),
+        eq(gapPocs.userId, userId)
+      )
+    );
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async isUserAssignedPoc(gapId: number, userId: number): Promise<boolean> {
+    const [poc] = await db
+      .select()
+      .from(gapPocs)
+      .where(
+        and(
+          eq(gapPocs.gapId, gapId),
+          eq(gapPocs.userId, userId)
+        )
+      )
+      .limit(1);
+    return !!poc;
   }
 
   // TAT Extension operations

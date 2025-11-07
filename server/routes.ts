@@ -8,6 +8,7 @@ import { sendGapAssignmentEmail, sendGapResolutionEmail, sendTATExtensionRequest
 import { logGapCreation, logGapAssignment, logGapStatusChange, logUserLogin, logUserLogout } from "./audit-logger";
 import type { Gap } from "@shared/schema";
 import { z } from "zod";
+import { sql } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import multer from "multer";
 import path from "path";
@@ -120,15 +121,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return;
         }
 
-        // Allow if user is: reporter, assignee, or Management/Admin/QA
-        const hasAccess =
-          gap.reporterId === user.id ||
-          gap.assignedToId === user.id ||
-          ["Management", "Admin", "QA/Ops"].includes(user.role);
-
-        if (!hasAccess) {
-          socket.emit("error", { message: "Access denied to this gap" });
-          return;
+        // RBAC: Same access control as GET /api/gaps/:id
+        const isAssignedPoc = await storage.isUserAssignedPoc(gap.id, user.id);
+        if (user.role !== "Admin" && user.role !== "Management") {
+          if (user.role === "QA/Ops" && gap.reporterId !== user.id) {
+            socket.emit("error", { message: "Access denied: You can only join gaps you reported" });
+            return;
+          }
+          if (user.role === "POC" && gap.assignedToId !== user.id && !isAssignedPoc) {
+            socket.emit("error", { message: "Access denied: You can only join gaps assigned to you" });
+            return;
+          }
         }
 
         socket.join(`gap-${gapId}`);
@@ -200,14 +203,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "User not found" });
       }
 
-      // Check if user can access this gap
-      const canAccess = 
-        gap.reporterId === user.id ||
-        gap.assignedToId === user.id ||
-        ["Management", "Admin", "QA/Ops"].includes(user.role);
-
-      if (!canAccess) {
-        return res.status(403).json({ message: "Access denied to this file" });
+      // RBAC: Same access control as GET /api/gaps/:id
+      const isAssignedPoc = await storage.isUserAssignedPoc(gap.id, user.id);
+      if (user.role !== "Admin" && user.role !== "Management") {
+        if (user.role === "QA/Ops" && gap.reporterId !== user.id) {
+          return res.status(403).json({ message: "Access denied: You can only download files from gaps you reported" });
+        }
+        if (user.role === "POC" && gap.assignedToId !== user.id && !isAssignedPoc) {
+          return res.status(403).json({ message: "Access denied: You can only download files from gaps assigned to you" });
+        }
       }
 
       // Verify the file belongs to this gap
@@ -258,14 +262,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "User not found" });
       }
 
-      // Check if user can access this gap
-      const canAccess = 
-        gap.reporterId === user.id ||
-        gap.assignedToId === user.id ||
-        ["Management", "Admin", "QA/Ops"].includes(user.role);
-
-      if (!canAccess) {
-        return res.status(403).json({ message: "Access denied to this gap" });
+      // RBAC: Same access control as GET /api/gaps/:id
+      const isAssignedPoc = await storage.isUserAssignedPoc(gapId, user.id);
+      if (user.role !== "Admin" && user.role !== "Management") {
+        if (user.role === "QA/Ops" && gap.reporterId !== user.id) {
+          return res.status(403).json({ message: "Access denied: You can only download attachments from gaps you reported" });
+        }
+        if (user.role === "POC" && gap.assignedToId !== user.id && !isAssignedPoc) {
+          return res.status(403).json({ message: "Access denied: You can only download attachments from gaps assigned to you" });
+        }
       }
 
       // Get all attachments for this gap
@@ -692,19 +697,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (user.role === "QA/Ops" && gap.reporterId !== user.id) {
           return res.status(403).json({ message: "Access denied: You can only view gaps you reported" });
         }
-        if (user.role === "POC" && gap.assignedToId !== user.id) {
-          return res.status(403).json({ message: "Access denied: You can only view gaps assigned to you" });
+        if (user.role === "POC") {
+          // Check both primary assignedToId and gap_pocs table
+          const isAssignedPoc = await storage.isUserAssignedPoc(gap.id, user.id);
+          if (gap.assignedToId !== user.id && !isAssignedPoc) {
+            return res.status(403).json({ message: "Access denied: You can only view gaps assigned to you" });
+          }
         }
       }
 
       // Get reporter and assignee info (sanitized)
       const reporter = await storage.getUser(gap.reporterId);
       const assignee = gap.assignedToId ? await storage.getUser(gap.assignedToId) : null;
+      
+      // Get all assigned POCs
+      const pocs = await storage.getGapPocs(gap.id);
 
       return res.json({ 
         gap,
         reporter: reporter ? sanitizeUser(reporter) : null,
-        assignee: assignee ? sanitizeUser(assignee) : null
+        assignee: assignee ? sanitizeUser(assignee) : null,
+        pocs
       });
     } catch (error) {
       console.error("Get gap error:", error);
@@ -927,6 +940,166 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all POCs for a gap
+  app.get("/api/gaps/:id/pocs", requireAuth, async (req, res) => {
+    try {
+      const gapId = Number(req.params.id);
+      const gap = await storage.getGap(gapId);
+      
+      if (!gap) {
+        return res.status(404).json({ message: "Gap not found" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // RBAC: Same access control as GET /api/gaps/:id
+      const isAssignedPoc = await storage.isUserAssignedPoc(gapId, user.id);
+      if (user.role !== "Admin" && user.role !== "Management") {
+        if (user.role === "QA/Ops" && gap.reporterId !== user.id) {
+          return res.status(403).json({ message: "Access denied: You can only view gaps you reported" });
+        }
+        if (user.role === "POC" && gap.assignedToId !== user.id && !isAssignedPoc) {
+          return res.status(403).json({ message: "Access denied: You can only view gaps assigned to you" });
+        }
+      }
+
+      const pocs = await storage.getGapPocs(gapId);
+      return res.json({ pocs });
+    } catch (error) {
+      console.error("Get gap POCs error:", error);
+      return res.status(500).json({ message: "Failed to get gap POCs" });
+    }
+  });
+
+  // Add a POC to a gap
+  app.post("/api/gaps/:id/pocs", requireAuth, async (req, res) => {
+    try {
+      const gapId = Number(req.params.id);
+      const { userId, isPrimary } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const gap = await storage.getGap(gapId);
+      if (!gap) {
+        return res.status(404).json({ message: "Gap not found" });
+      }
+
+      // Check permissions: Admin, Management, or existing POC can add POCs
+      const isExistingPoc = await storage.isUserAssignedPoc(gapId, user.id);
+      if (!["Admin", "Management"].includes(user.role) && !isExistingPoc) {
+        return res.status(403).json({ message: "Only Admin, Management, or assigned POCs can add more POCs" });
+      }
+
+      // Check if POC user exists and is actually a POC role
+      const pocUser = await storage.getUser(userId);
+      if (!pocUser) {
+        return res.status(404).json({ message: "User to be assigned not found" });
+      }
+      if (pocUser.role !== "POC") {
+        return res.status(400).json({ message: "User must have POC role" });
+      }
+
+      // Check if already assigned
+      const alreadyAssigned = await storage.isUserAssignedPoc(gapId, userId);
+      if (alreadyAssigned) {
+        return res.status(400).json({ message: "User is already assigned as POC to this gap" });
+      }
+
+      // If setting as primary, clear any existing primary flags to ensure only one primary POC
+      if (isPrimary) {
+        const existingPocs = await storage.getGapPocs(gapId);
+        for (const existingPoc of existingPocs) {
+          if (existingPoc.isPrimary) {
+            await storage.db.execute(sql`
+              UPDATE gap_pocs 
+              SET is_primary = false 
+              WHERE gap_id = ${gapId} AND user_id = ${existingPoc.userId}
+            `);
+          }
+        }
+      }
+
+      const poc = await storage.addGapPoc({
+        gapId,
+        userId,
+        addedById: user.id,
+        isPrimary: isPrimary || false,
+      });
+
+      // Log POC addition
+      await storage.createAuditLog({
+        userId: user.id,
+        action: "gap_poc_added",
+        entityType: "gap",
+        entityId: gapId,
+        ipAddress: req.ip || req.socket.remoteAddress || null,
+        userAgent: req.headers["user-agent"] || null,
+      });
+
+      return res.json({ poc });
+    } catch (error) {
+      console.error("Add gap POC error:", error);
+      return res.status(500).json({ message: "Failed to add POC to gap" });
+    }
+  });
+
+  // Remove a POC from a gap
+  app.delete("/api/gaps/:id/pocs/:userId", requireAuth, async (req, res) => {
+    try {
+      const gapId = Number(req.params.id);
+      const pocUserId = Number(req.params.userId);
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const gap = await storage.getGap(gapId);
+      if (!gap) {
+        return res.status(404).json({ message: "Gap not found" });
+      }
+
+      // Check permissions: Admin, Management can remove any POC, users can remove themselves
+      const canRemove = 
+        ["Admin", "Management"].includes(user.role) || 
+        user.id === pocUserId;
+
+      if (!canRemove) {
+        return res.status(403).json({ message: "Only Admin, Management can remove POCs, or users can remove themselves" });
+      }
+
+      const removed = await storage.removeGapPoc(gapId, pocUserId);
+      if (!removed) {
+        return res.status(404).json({ message: "POC assignment not found" });
+      }
+
+      // Log POC removal
+      await storage.createAuditLog({
+        userId: user.id,
+        action: "gap_poc_removed",
+        entityType: "gap",
+        entityId: gapId,
+        ipAddress: req.ip || req.socket.remoteAddress || null,
+        userAgent: req.headers["user-agent"] || null,
+      });
+
+      return res.json({ success: true });
+    } catch (error) {
+      console.error("Remove gap POC error:", error);
+      return res.status(500).json({ message: "Failed to remove POC from gap" });
+    }
+  });
+
   app.post("/api/gaps/:id/reopen", requireAuth, async (req, res) => {
     try {
       // Verify gap exists and user has permission
@@ -1019,8 +1192,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Content is required" });
       }
 
+      const gapId = Number(req.params.gapId);
+      const gap = await storage.getGap(gapId);
+      if (!gap) {
+        return res.status(404).json({ message: "Gap not found" });
+      }
+
+      // Check user has access to this gap
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // RBAC: Same access control as GET /api/gaps/:id
+      const isAssignedPoc = await storage.isUserAssignedPoc(gapId, user.id);
+      if (user.role !== "Admin" && user.role !== "Management") {
+        if (user.role === "QA/Ops" && gap.reporterId !== user.id) {
+          return res.status(403).json({ message: "Access denied: You can only comment on gaps you reported" });
+        }
+        if (user.role === "POC" && gap.assignedToId !== user.id && !isAssignedPoc) {
+          return res.status(403).json({ message: "Access denied: You can only comment on gaps assigned to you" });
+        }
+      }
+
       const comment = await storage.createComment({
-        gapId: Number(req.params.gapId),
+        gapId,
         authorId: req.session.userId!,
         content,
         attachments: attachments || [],
