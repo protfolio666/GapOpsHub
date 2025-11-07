@@ -745,7 +745,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== FORM TEMPLATE ROUTES ====================
   
-  app.get("/api/form-templates", requireRole("Management", "Admin"), async (req, res) => {
+  // All authenticated users can view templates
+  app.get("/api/form-templates", requireAuth, async (req, res) => {
     try {
       const { active } = req.query;
       
@@ -760,58 +761,104 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/form-templates/:id", requireRole("Management", "Admin"), async (req, res) => {
+  // All authenticated users can view a specific template
+  app.get("/api/form-templates/:id", requireAuth, async (req, res) => {
     try {
       const template = await storage.getFormTemplate(Number(req.params.id));
       if (!template) {
         return res.status(404).json({ message: "Template not found" });
       }
 
-      const fields = await storage.getFormFieldsByTemplate(template.id);
-
-      return res.json({ template, fields });
+      return res.json({ template });
     } catch (error) {
       console.error("Get form template error:", error);
       return res.status(500).json({ message: "Failed to get form template" });
     }
   });
 
+  // Only Admin and Management can create templates
   app.post("/api/form-templates", requireRole("Management", "Admin"), async (req, res) => {
     try {
-      const { name, description, department, fields } = req.body;
+      const { name, description, schemaJson, visibility, department, version } = req.body;
 
-      if (!name) {
-        return res.status(400).json({ message: "Name is required" });
+      if (!name || !schemaJson) {
+        return res.status(400).json({ message: "Name and schema are required" });
       }
 
       const template = await storage.createFormTemplate({
         name,
         description: description || null,
+        schemaJson,
+        visibility: visibility || "all",
         department: department || null,
+        version: version || "1.0",
         createdById: req.session.userId!,
         active: true,
       });
 
-      // Create fields
-      if (fields && Array.isArray(fields)) {
-        for (let i = 0; i < fields.length; i++) {
-          await storage.createFormField({
-            templateId: template.id,
-            fieldType: fields[i].type,
-            label: fields[i].label,
-            required: fields[i].required || false,
-            options: fields[i].options || null,
-            order: i,
-          });
-        }
-      }
-
-      const createdFields = await storage.getFormFieldsByTemplate(template.id);
-
-      return res.json({ template, fields: createdFields });
+      return res.json({ template });
     } catch (error) {
       console.error("Create form template error:", error);
       return res.status(500).json({ message: "Failed to create form template" });
+    }
+  });
+
+  // Only Admin and Management can update templates
+  app.patch("/api/form-templates/:id", requireRole("Management", "Admin"), async (req, res) => {
+    try {
+      const { name, description, schemaJson, visibility, department, version, active } = req.body;
+
+      const updates: any = {};
+      if (name !== undefined) updates.name = name;
+      if (description !== undefined) updates.description = description;
+      if (schemaJson !== undefined) updates.schemaJson = schemaJson;
+      if (visibility !== undefined) updates.visibility = visibility;
+      if (department !== undefined) updates.department = department;
+      if (version !== undefined) updates.version = version;
+      if (active !== undefined) updates.active = active;
+
+      const template = await storage.updateFormTemplate(Number(req.params.id), updates);
+      if (!template) {
+        return res.status(404).json({ message: "Template not found" });
+      }
+
+      return res.json({ template });
+    } catch (error) {
+      console.error("Update form template error:", error);
+      return res.status(500).json({ message: "Failed to update form template" });
+    }
+  });
+
+  // Only Admin and Management can delete templates
+  app.delete("/api/form-templates/:id", requireRole("Management", "Admin"), async (req, res) => {
+    try {
+      await storage.deleteFormTemplate(Number(req.params.id));
+      return res.json({ message: "Template deleted successfully" });
+    } catch (error) {
+      console.error("Delete form template error:", error);
+      return res.status(500).json({ message: "Failed to delete form template" });
+    }
+  });
+
+  // Only Admin and Management can duplicate templates
+  app.post("/api/form-templates/:id/duplicate", requireRole("Management", "Admin"), async (req, res) => {
+    try {
+      const { name } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ message: "Name is required for duplicate" });
+      }
+
+      const template = await storage.duplicateFormTemplate(
+        Number(req.params.id),
+        name,
+        req.session.userId!
+      );
+
+      return res.json({ template });
+    } catch (error) {
+      console.error("Duplicate form template error:", error);
+      return res.status(500).json({ message: "Failed to duplicate template" });
     }
   });
 
