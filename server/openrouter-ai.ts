@@ -2,6 +2,8 @@ import type { Gap } from "@shared/schema";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
+// Custom model from environment variable, defaults to free Llama model
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free";
 
 interface OpenRouterMessage {
   role: "system" | "user" | "assistant";
@@ -16,7 +18,7 @@ interface OpenRouterResponse {
   }>;
 }
 
-async function callOpenRouter(messages: OpenRouterMessage[], model = "meta-llama/llama-3.1-8b-instruct:free"): Promise<string> {
+async function callOpenRouter(messages: OpenRouterMessage[], model = OPENROUTER_MODEL): Promise<string> {
   if (!OPENROUTER_API_KEY) {
     throw new Error("OPENROUTER_API_KEY not configured");
   }
