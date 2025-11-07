@@ -31,7 +31,7 @@ export interface IStorage {
   createGap(gap: InsertGap): Promise<Gap>;
   updateGap(id: number, gap: Partial<Omit<Gap, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Gap | undefined>;
   deleteGap(id: number): Promise<boolean>;
-  resolveGap(id: number, resolutionSummary: string, resolutionAttachments: string[]): Promise<Gap | undefined>;
+  resolveGap(id: number, resolutionSummary: string, resolutionAttachments: any[]): Promise<Gap | undefined>;
   
   // Comment operations
   getComment(id: number): Promise<Comment | undefined>;
@@ -205,7 +205,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createComment(comment: InsertComment): Promise<Comment> {
-    const [newComment] = await db.insert(comments).values(comment).returning();
+    const [newComment] = await db.insert(comments).values({
+      ...comment,
+      attachments: comment.attachments as any,
+    } as any).returning();
     return newComment;
   }
 

@@ -53,7 +53,7 @@ export default function GapDetailPage() {
   const { toast } = useToast();
   const [socket, setSocket] = useState<Socket | null>(null);
   const [resolutionSummary, setResolutionSummary] = useState("");
-  const [resolutionAttachments, setResolutionAttachments] = useState<string[]>([]);
+  const [resolutionFiles, setResolutionFiles] = useState<File[]>([]);
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
   const resolutionFileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -77,7 +77,7 @@ export default function GapDetailPage() {
   });
 
   const addCommentMutation = useMutation({
-    mutationFn: async ({ content, attachments }: { content: string; attachments: string[] }) => {
+    mutationFn: async ({ content, attachments }: { content: string; attachments: any[] }) => {
       return await apiRequest("POST", `/api/gaps/${gapId}/comments`, { content, attachments });
     },
     onSuccess: () => {
@@ -94,16 +94,46 @@ export default function GapDetailPage() {
 
   const resolveGapMutation = useMutation({
     mutationFn: async () => {
+      let uploadedFiles: any[] = [];
+
+      // Upload files first if any
+      if (resolutionFiles.length > 0) {
+        const formData = new FormData();
+        resolutionFiles.forEach((file) => {
+          formData.append("files", file);
+        });
+
+        const uploadResponse = await fetch("/api/files/upload", {
+          method: "POST",
+          body: formData,
+          credentials: "include",
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Failed to upload files");
+        }
+
+        const uploadData = await uploadResponse.json();
+        uploadedFiles = uploadData.files;
+      }
+
+      // Resolve gap with file metadata
       return await apiRequest("PATCH", `/api/gaps/${gapId}/resolve`, {
         resolutionSummary,
-        resolutionAttachments,
+        resolutionAttachments: uploadedFiles.map((f: any) => ({
+          originalName: f.originalName,
+          filename: f.filename,
+          size: f.size,
+          mimetype: f.mimetype,
+          path: f.path,
+        })),
       });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/gaps/${gapId}`] });
       setIsResolveDialogOpen(false);
       setResolutionSummary("");
-      setResolutionAttachments([]);
+      setResolutionFiles([]);
       toast({
         title: "Success",
         description: "Gap has been marked as resolved.",
@@ -279,15 +309,31 @@ export default function GapDetailPage() {
                 <CardContent>
                   {attachments.length > 0 ? (
                     <div className="space-y-2">
-                      {attachments.map((file, idx) => (
-                        <div key={idx} className="flex items-center gap-2 p-3 bg-muted rounded-md hover-elevate" data-testid={`attachment-${idx}`}>
-                          <FileText className="h-5 w-5 text-muted-foreground" />
-                          <span className="text-sm flex-1">{file}</span>
-                          <Button variant="ghost" size="sm" data-testid={`button-download-${idx}`}>
-                            Download
-                          </Button>
-                        </div>
-                      ))}
+                      {attachments.map((file: any, idx) => {
+                        const isFileObject = typeof file === "object" && file.path;
+                        const displayName = isFileObject ? file.originalName : file;
+                        const downloadPath = isFileObject ? file.path : null;
+                        const isImage = isFileObject && file.mimetype?.startsWith("image/");
+                        
+                        return (
+                          <div key={idx} className="flex items-center gap-2 p-3 bg-muted rounded-md hover-elevate" data-testid={`attachment-${idx}`}>
+                            <FileText className="h-5 w-5 text-muted-foreground" />
+                            <span className="text-sm flex-1">{displayName}</span>
+                            {downloadPath && (
+                              <a
+                                href={downloadPath}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                download={displayName}
+                              >
+                                <Button variant="ghost" size="sm" data-testid={`button-download-${idx}`}>
+                                  {isImage ? "View" : "Download"}
+                                </Button>
+                              </a>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   ) : (
                     <p className="text-sm text-muted-foreground">No attachments uploaded</p>
@@ -427,8 +473,7 @@ export default function GapDetailPage() {
                       onChange={(e) => {
                         const files = e.target.files;
                         if (files) {
-                          const fileNames = Array.from(files).map(f => f.name);
-                          setResolutionAttachments(prev => [...prev, ...fileNames]);
+                          setResolutionFiles(prev => [...prev, ...Array.from(files)]);
                         }
                       }}
                       multiple
@@ -446,14 +491,14 @@ export default function GapDetailPage() {
                       <Upload className="h-4 w-4 mr-2" />
                       Upload Documents
                     </Button>
-                    {resolutionAttachments.length > 0 && (
+                    {resolutionFiles.length > 0 && (
                       <div className="flex flex-wrap gap-2 mt-3">
-                        {resolutionAttachments.map((file, idx) => (
+                        {resolutionFiles.map((file, idx) => (
                           <div key={idx} className="flex items-center gap-2 px-3 py-2 bg-muted rounded-md" data-testid={`resolution-attachment-${idx}`}>
                             <FileText className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{file}</span>
+                            <span className="text-sm">{file.name}</span>
                             <button
-                              onClick={() => setResolutionAttachments(prev => prev.filter((_, i) => i !== idx))}
+                              onClick={() => setResolutionFiles(prev => prev.filter((_, i) => i !== idx))}
                               className="hover:bg-muted-foreground/20 rounded-full p-1"
                               data-testid={`button-remove-resolution-attachment-${idx}`}
                             >

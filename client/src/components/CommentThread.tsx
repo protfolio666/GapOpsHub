@@ -17,33 +17,64 @@ interface Comment {
 
 interface CommentThreadProps {
   comments: Comment[];
-  onAddComment?: (content: string, attachments: string[]) => Promise<void>;
+  onAddComment?: (content: string, attachments: any[]) => Promise<void>;
   isSubmitting?: boolean;
 }
 
 export default function CommentThread({ comments, onAddComment, isSubmitting }: CommentThreadProps) {
   const [newComment, setNewComment] = useState("");
-  const [attachments, setAttachments] = useState<string[]>([]);
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const fileNames = Array.from(files).map(f => f.name);
-      setAttachments(prev => [...prev, ...fileNames]);
+      setAttachmentFiles(prev => [...prev, ...Array.from(files)]);
     }
   };
 
   const removeAttachment = (index: number) => {
-    setAttachments(prev => prev.filter((_, i) => i !== index));
+    setAttachmentFiles(prev => prev.filter((_, i) => i !== index));
   };
 
   const handleSubmit = async () => {
-    if ((newComment.trim() || attachments.length > 0) && onAddComment) {
+    if ((newComment.trim() || attachmentFiles.length > 0) && onAddComment) {
       try {
-        await onAddComment(newComment, attachments);
+        let uploadedFiles: any[] = [];
+
+        // Upload files first if any
+        if (attachmentFiles.length > 0) {
+          const formData = new FormData();
+          attachmentFiles.forEach((file) => {
+            formData.append("files", file);
+          });
+
+          const uploadResponse = await fetch("/api/files/upload", {
+            method: "POST",
+            body: formData,
+            credentials: "include",
+          });
+
+          if (!uploadResponse.ok) {
+            throw new Error("Failed to upload files");
+          }
+
+          const uploadData = await uploadResponse.json();
+          uploadedFiles = uploadData.files;
+        }
+
+        // Pass uploaded file metadata to parent
+        const attachmentData = uploadedFiles.map((f: any) => ({
+          originalName: f.originalName,
+          filename: f.filename,
+          size: f.size,
+          mimetype: f.mimetype,
+          path: f.path,
+        }));
+
+        await onAddComment(newComment, attachmentData);
         setNewComment("");
-        setAttachments([]);
+        setAttachmentFiles([]);
         if (fileInputRef.current) {
           fileInputRef.current.value = "";
         }
@@ -69,13 +100,26 @@ export default function CommentThread({ comments, onAddComment, isSubmitting }: 
               </div>
               <p className="text-sm whitespace-pre-wrap">{comment.content}</p>
               {comment.attachments && comment.attachments.length > 0 && (
-                <div className="flex gap-2 mt-2">
-                  {comment.attachments.map((file, idx) => (
-                    <div key={idx} className="text-xs bg-muted px-2 py-1 rounded flex items-center gap-1">
-                      <Paperclip className="h-3 w-3" />
-                      {file}
-                    </div>
-                  ))}
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {comment.attachments.map((file: any, idx) => {
+                    const isFileObject = typeof file === "object" && file.path;
+                    const displayName = isFileObject ? file.originalName : file;
+                    const downloadPath = isFileObject ? file.path : null;
+                    
+                    return (
+                      <a
+                        key={idx}
+                        href={downloadPath || "#"}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className={`text-xs bg-muted px-2 py-1 rounded flex items-center gap-1 ${downloadPath ? "hover:bg-muted-foreground/20 cursor-pointer" : ""}`}
+                        data-testid={`attachment-link-${idx}`}
+                      >
+                        <Paperclip className="h-3 w-3" />
+                        {displayName}
+                      </a>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -93,12 +137,12 @@ export default function CommentThread({ comments, onAddComment, isSubmitting }: 
             rows={3}
             data-testid="input-comment"
           />
-          {attachments.length > 0 && (
+          {attachmentFiles.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {attachments.map((file, idx) => (
+              {attachmentFiles.map((file, idx) => (
                 <div key={idx} className="text-xs bg-muted px-2 py-1 rounded flex items-center gap-2" data-testid={`attachment-chip-${idx}`}>
                   <Paperclip className="h-3 w-3" />
-                  <span>{file}</span>
+                  <span>{file.name}</span>
                   <button
                     onClick={() => removeAttachment(idx)}
                     className="hover:bg-muted-foreground/20 rounded-full p-0.5"
@@ -132,7 +176,7 @@ export default function CommentThread({ comments, onAddComment, isSubmitting }: 
             <Button 
               size="sm" 
               onClick={handleSubmit} 
-              disabled={isSubmitting || (!newComment.trim() && attachments.length === 0)} 
+              disabled={isSubmitting || (!newComment.trim() && attachmentFiles.length === 0)} 
               data-testid="button-submit-comment"
             >
               {isSubmitting ? (

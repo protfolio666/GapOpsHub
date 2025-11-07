@@ -9,6 +9,39 @@ import { logGapCreation, logGapAssignment, logGapStatusChange, logUserLogin, log
 import type { Gap } from "@shared/schema";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
+import { promisify } from "util";
+
+const mkdir = promisify(fs.mkdir);
+
+// Configure multer for file uploads
+const uploadDir = path.join(process.cwd(), "uploads");
+
+// Ensure uploads directory exists
+(async () => {
+  try {
+    await mkdir(uploadDir, { recursive: true });
+  } catch (error) {
+    console.error("Failed to create uploads directory:", error);
+  }
+})();
+
+const fileStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    cb(null, uniqueSuffix + "-" + file.originalname);
+  },
+});
+
+const upload = multer({ 
+  storage: fileStorage,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+});
 
 // Validation schemas
 const updateUserSchema = z.object({
@@ -120,6 +153,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Middleware to attach user to requests
   app.use(attachUser);
+
+  // ==================== FILE UPLOAD ROUTES ====================
+
+  // Upload files endpoint
+  app.post("/api/files/upload", requireAuth, upload.array("files", 10), async (req, res) => {
+    try {
+      if (!req.files || !Array.isArray(req.files)) {
+        return res.status(400).json({ message: "No files uploaded" });
+      }
+
+      const files = req.files.map((file) => ({
+        originalName: file.originalname,
+        filename: file.filename,
+        size: file.size,
+        mimetype: file.mimetype,
+        path: `/api/files/download/${file.filename}`,
+      }));
+
+      return res.json({ files });
+    } catch (error) {
+      console.error("File upload error:", error);
+      return res.status(500).json({ message: "File upload failed" });
+    }
+  });
+
+  // Download/view file endpoint
+  app.get("/api/files/download/:filename", requireAuth, async (req, res) => {
+    try {
+      const { filename } = req.params;
+      const filePath = path.join(uploadDir, filename);
+
+      if (!fs.existsSync(filePath)) {
+        return res.status(404).json({ message: "File not found" });
+      }
+
+      // Get original filename from the stored filename (remove timestamp prefix)
+      const originalName = filename.substring(filename.indexOf("-") + 1);
+      
+      // Set content disposition for download
+      res.setHeader("Content-Disposition", `inline; filename="${originalName}"`);
+      
+      return res.sendFile(filePath);
+    } catch (error) {
+      console.error("File download error:", error);
+      return res.status(500).json({ message: "File download failed" });
+    }
+  });
 
   // ==================== AUTH ROUTES ====================
   
