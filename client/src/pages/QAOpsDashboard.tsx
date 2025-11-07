@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import MetricCard from "@/components/MetricCard";
 import GapCard from "@/components/GapCard";
 import { FileText, CheckCircle, BookOpen, TrendingUp } from "lucide-react";
@@ -9,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search } from "lucide-react";
 
 export default function QAOpsDashboard() {
+  const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
@@ -146,7 +148,7 @@ export default function QAOpsDashboard() {
                   reporter={gap.reporter?.name || "Unknown"}
                   assignedTo={gap.assignee?.name}
                   createdAt={new Date(gap.createdAt)}
-                  onClick={() => console.log("Gap clicked:", gap.gapId)}
+                  onClick={() => navigate(`/qa/gaps/${gap.id}`)}
                 />
               ))
             )}

@@ -841,13 +841,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "User not found" });
       }
 
-      // Only reporter, assignee, or Management/Admin can reopen
+      // Only reporter, assignee, QA/Ops, Management, or Admin can reopen
       if (
         existingGap.reporterId !== user.id &&
         existingGap.assignedToId !== user.id &&
-        !["Management", "Admin"].includes(user.role)
+        !["QA/Ops", "Management", "Admin"].includes(user.role)
       ) {
-        return res.status(403).json({ message: "Only the reporter, assignee, or Management can reopen this gap" });
+        return res.status(403).json({ message: "Only the reporter, assignee, QA/Ops, or Management can reopen this gap" });
       }
 
       const gap = await storage.updateGap(Number(req.params.id), {

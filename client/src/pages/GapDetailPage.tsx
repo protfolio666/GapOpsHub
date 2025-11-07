@@ -168,6 +168,26 @@ export default function GapDetailPage() {
     },
   });
 
+  const reopenGapMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", `/api/gaps/${gapId}/reopen`, {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/gaps/${gapId}`] });
+      toast({
+        title: "Success",
+        description: "Gap has been reopened.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to reopen gap.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Setup WebSocket connection for real-time comments
   useEffect(() => {
     if (!gapId) return;
@@ -556,10 +576,28 @@ export default function GapDetailPage() {
                 </div>
               </DialogContent>
             </Dialog>
-            <Button variant="outline" className="w-full" data-testid="button-reopen-gap">
-              <XCircle className="h-4 w-4 mr-2" />
-              Reopen Gap
-            </Button>
+            {userData?.user && ["Management", "QA/Ops", "Admin"].includes(userData.user.role) && 
+             gap && (gap.status === "Closed" || gap.status === "Resolved") && (
+              <Button 
+                variant="outline" 
+                className="w-full" 
+                onClick={() => reopenGapMutation.mutate()}
+                disabled={reopenGapMutation.isPending}
+                data-testid="button-reopen-gap"
+              >
+                {reopenGapMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Reopening...
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="h-4 w-4 mr-2" />
+                    Reopen Gap
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         </div>
       </div>
