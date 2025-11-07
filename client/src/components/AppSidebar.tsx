@@ -1,5 +1,5 @@
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
-import { LayoutDashboard, FileText, Settings, Users, BookOpen, BarChart3, PlusCircle, ListChecks } from "lucide-react";
+import { LayoutDashboard, FileText, Settings, Users, BookOpen, BarChart3, PlusCircle, ListChecks, FormInput } from "lucide-react";
 import { Link } from "wouter";
 import UserAvatar from "./UserAvatar";
 
@@ -12,6 +12,7 @@ const menuItems = {
   Admin: [
     { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
     { title: "Users & Roles", url: "/admin/users", icon: Users },
+    { title: "Form Builder", url: "/admin/form-builder", icon: FormInput },
     { title: "SOPs", url: "/admin/sops", icon: BookOpen },
     { title: "Reports", url: "/admin/reports", icon: BarChart3 },
     { title: "Settings", url: "/admin/settings", icon: Settings },
@@ -19,7 +20,7 @@ const menuItems = {
   Management: [
     { title: "Dashboard", url: "/management", icon: LayoutDashboard },
     { title: "All Gaps", url: "/management/gaps", icon: FileText },
-    { title: "Form Builder", url: "/management/forms", icon: PlusCircle },
+    { title: "Form Builder", url: "/management/form-builder", icon: FormInput },
     { title: "Reports", url: "/management/reports", icon: BarChart3 },
   ],
   "QA/Ops": [

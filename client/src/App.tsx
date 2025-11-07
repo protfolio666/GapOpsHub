@@ -15,6 +15,7 @@ import GapDetailPage from "@/pages/GapDetailPage";
 import GapSubmissionForm from "@/pages/GapSubmissionForm";
 import FormBuilder from "@/components/FormBuilder";
 import UserManagementPage from "@/pages/UserManagementPage";
+import FormBuilderPage from "@/pages/FormBuilderPage";
 import NotFound from "@/pages/not-found";
 import type { PublicUser } from "@shared/schema";
 import { authApi } from "@/lib/api";
@@ -55,15 +56,20 @@ function Router({ user }: { user: PublicUser }) {
         <ProtectedRoute user={user} allowedRoles={["Admin"]} component={UserManagementPage} />
       </Route>
       
+      <Route path="/admin/form-builder">
+        <ProtectedRoute user={user} allowedRoles={["Admin", "Management"]} component={FormBuilderPage} />
+      </Route>
+      
+      <Route path="/management/form-builder">
+        <ProtectedRoute user={user} allowedRoles={["Admin", "Management"]} component={FormBuilderPage} />
+      </Route>
+      
       <Route path="/admin/gaps/:id" component={GapDetailPage} />
       <Route path="/management/gaps/:id" component={GapDetailPage} />
       <Route path="/poc/gaps/:id" component={GapDetailPage} />
       <Route path="/qa/gaps/:id" component={GapDetailPage} />
       
       <Route path="/qa/new" component={GapSubmissionForm} />
-      
-      <Route path="/admin/forms" component={FormBuilder} />
-      <Route path="/management/forms" component={FormBuilder} />
       
       <Route path="/" component={
         user.role === "Admin" ? ManagementDashboard :

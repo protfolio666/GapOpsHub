@@ -1,0 +1,163 @@
+1️⃣ Gap Submission & Tracking
+
+Who: QA / Ops
+Why: To actually raise a gap using the form templates you built.
+To build:
+
+“Raise New Gap” page → dynamically loads form template.
+
+Save responses + attachments in DB (Gap table).
+
+Status flow: PendingAI → PendingReview → Assigned → InProgress → Resolved → Closed → Reopened.
+
+Each gap links to:
+
+Template used
+
+Created by (QA/Ops user)
+
+Department/team
+
+✅ Once this works, your system becomes functional.
+
+2️⃣ AI Validation (Duplicate Check + SOP Suggestion)
+
+Who: Automatic via OpenRouter AI
+Why: To detect if the submitted gap is similar to a past one.
+To build:
+
+On new gap submission → send title + description to AI (OpenRouter API).
+
+Compare embeddings with past gaps.
+
+If similar → mark as “AI-Flagged” and attach suggestions.
+
+If duplicate → notify management to decide (Approve as new / Discard).
+
+If SOP exists → show “AI Suggested SOP: [link]”.
+
+✅ This is your USP feature — must be handled cleanly.
+
+3️⃣ Management Review & Assignment
+
+Who: Manager / Team Lead
+Why: To review AI flags and assign tasks.
+To build:
+
+“Pending Review” dashboard showing flagged/new gaps.
+
+Buttons:
+
+✅ Approve & Assign (choose POC, set Priority, Severity, TAT)
+
+❌ Mark as Duplicate (discard + send email to reporter)
+
+⚙️ Override AI (treat as new gap)
+
+Add priority, severity, tat_deadline, assigned_poc_id.
+
+✅ This gives your app workflow authority.
+
+4️⃣ POC Workflow
+
+Who: POC users
+Why: To act on assigned gaps.
+To build:
+
+“My Assigned Gaps” list (filter by priority/severity/status).
+
+Each gap detail view includes:
+
+Chat-like thread for communication
+
+File uploads (proof, screenshots)
+
+Buttons: “Resolve”, “Request TAT Extension”, “Close”
+
+When resolved → reporter (QA/Ops) gets mail and can reopen if unsatisfied.
+
+✅ This enables the full gap lifecycle.
+
+5️⃣ TAT & Escalation Logic
+
+Who: System automated
+Why: For SLA compliance and auto-escalation.
+To build:
+
+Background job (cron or scheduler) checks gaps daily:
+
+If now > tat_deadline and not resolved → mark as “Overdue”.
+
+Auto-email escalation to Manager + CC Admin.
+
+POC can request extension → goes to Manager approval flow.
+
+✅ Ensures accountability.
+
+6️⃣ Reopen Flow
+
+Who: QA / Ops
+Why: To ensure satisfaction after resolution.
+To build:
+
+Allow “Reopen Gap” button on closed gaps (within X days).
+
+Notify assigned POC + Manager.
+
+Increment “Reopen count” for POC metrics.
+
+✅ Improves transparency & data quality.
+
+7️⃣ Notification System
+
+Why: Keep everyone updated automatically.
+To build:
+
+Email (Nodemailer) for:
+
+Assignment
+
+Duplicate rejection
+
+Closure
+
+TAT breach
+
+Reopen
+
+Optional: add Socket.io for instant dashboard updates.
+
+✅ Makes system feel alive.
+
+8️⃣ Dashboards & Reports
+
+Who: Management / Admin
+Why: Track performance and efficiency.
+To build:
+
+Management view:
+
+QA/Ops metrics → Gaps raised, Validated, SOP impact
+
+POC metrics → Closed, TAT breaches, Reopen rate, SOP usage
+
+Admin view:
+
+All metrics + AI logs, escalation history, and reports.
+
+Charts → Recharts or Chart.js
+
+✅ Turns data into insights.
+
+9️⃣ Audit & Logging
+
+Why: Compliance and accountability.
+To build:
+
+AuditLog table: { id, action, user_id, gap_id, details, createdAt }
+
+Log every: Assign, Close, Reopen, Extension request/approval.
+
+Admin-only viewer page.
+
+✅ Critical for traceability.
