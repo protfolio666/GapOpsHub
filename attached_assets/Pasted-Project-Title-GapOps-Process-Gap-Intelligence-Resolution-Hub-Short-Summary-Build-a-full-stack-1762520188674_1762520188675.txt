@@ -1,0 +1,228 @@
+Project Title: GapOps — Process Gap Intelligence & Resolution Hub
+
+Short Summary:
+Build a full-stack web application called GapOps — an AI-assisted Process Gap Intelligence & Resolution System for QA, CX, and Operations teams. It’s not an agent-level ticket system; it tracks process-level gaps (missing SOPs, process breakdowns, recurring operational failures). Core features: RBAC, form builder (management), gap submission (QA/Ops), AI similarity + SOP suggestions (OpenRouter embeddings/LLM), management assignment -> POC execution, escalation on TAT breach, and dashboards for QA teams and POCs with specific metrics.
+
+Tech Stack (required)
+
+Frontend: Next.js (React) + Tailwind CSS + shadcn/ui + Framer Motion (for micro-interactions)
+
+Backend: Node.js (Express or NestJS)
+
+DB: PostgreSQL (Prisma ORM)
+
+Auth: JWT + RBAC middleware
+
+AI: OpenRouter API for embeddings & LLM (with local/mock fallback for dev)
+
+Storage: AWS S3 (or Firebase Storage) for attachments (images, videos, docs)
+
+Email: Nodemailer (SMTP)
+
+Realtime: Socket.io or WebSocket
+
+Charts: Recharts or Chart.js
+
+Roles & Exact Access Rules (RBAC)
+
+Admin (Godfather)
+
+Full access to everything: users, roles, all gaps, AI logs, SOPs, TAT config, reports. Can delete/modify any record.
+
+Management (Manager + Team Lead)
+
+Can create/edit FormTemplates (templates for gap submission).
+
+Sees all gaps across org. Reviews AI suggestions, assigns POCs, sets Priority/Severity/TAT, approves/rejects extension requests, overrides duplicates, merges, or discards.
+
+QA / Ops
+
+Can create and view only their own submitted gaps. Can comment on their gaps and reopen if not satisfied. Cannot view other teams’ submissions.
+
+POC
+
+Can view only gaps assigned to them. Can respond, upload resolution evidence, request TAT extension, mark Resolved/Closed. Reopen metric tracked for POC only.
+
+Enforce these rules in middleware so every API checks role + resource ownership.
+
+Core Entities / Prisma-style Schema (high-level)
+
+User: id, name, email, password_hash, role, department, created_at
+
+FormTemplate: id, name, fields_json, created_by, created_at
+
+Gap: id, title, description, template_id, reporter_id, assigned_poc_id, priority, severity, status (PendingAI/NeedsReview/Assigned/InProgress/Resolved/Closed/Reopened/Overdue), tat_deadline (date), attachments[], ai_flag (bool), ai_matches[], suggested_sop_id, created_at, updated_at
+
+Comment: id, gap_id, user_id, body_rich, attachments[], created_at
+
+SOP: id, title, summary, link, tags[], created_by, created_at
+
+TATExtensionRequest: id, gap_id, requested_by, reason, requested_until, status (Pending/Approved/Rejected), created_at
+
+AuditLog: id, actor_id, action_type, entity, entity_id, metadata, timestamp
+
+AI Behavior & SOP Suggestion (OpenRouter)
+
+On gap submission: create an embedding for title + description + key form fields. Perform semantic search against embeddings of historical gaps and SOP summaries.
+
+If match above threshold (configurable): set ai_flag = true, attach top-3 similar gaps with similarity scores to ai_matches, and suggest the best matching SOP (suggested_sop_id) with a confidence score.
+
+Management UI: show AI panel with suggested similar gaps + SOP link. Options: Apply SOP / Assign as New / Mark Duplicate (Discard).
+
+Dev fallback: if OpenRouter key not present, use a deterministic mock (TF-IDF cosine on small sample) so dev/demo works locally.
+
+Learning loop: when management chooses Apply SOP or merges, record that action to improve suggestion accuracy (store relation between gap and SOP).
+
+Workflow (exact)
+
+Management creates FormTemplate.
+
+QA/Ops fills form → gap created with status PendingAI.
+
+Backend runs AI similarity job → updates ai_flag, ai_matches, suggested_sop_id.
+
+Management reviews AI suggestions → chooses action: Assign POC (with Priority/Severity/TAT), Override (treat as new), or Mark Duplicate/Discard (sends email to reporter: “Similar gap exists”).
+
+If assigned → status Assigned and POC receives realtime + email notification. POC works, uploads evidence → marks Resolved.
+
+Management or QA reviewer verifies. Reporter (original QA/Ops user) receives “Closed” email and may Reopen within configured window (e.g., 7 days). Reopen is allowed and sets status Reopened and notifies Management + POC.
+
+If TAT deadline passes without resolution → status Overdue and auto-email escalation sent to POC + assigned Manager + optional Admin. Optionally escalate again after configured intervals.
+
+Escalation & Notification Rules (exact)
+
+TAT breach → mark gap Overdue and send email to: POC, Manager, (CC Admin optional). Email includes gap ID, title, severity, link.
+
+POC reminder cadence: 0h (initial), 24h (if still overdue) escalate to next-level manager. Configurable in Admin settings.
+
+Extension requests: POC files TATExtensionRequest → Management reviews → Approve/Reject → email to POC with result. If Approved, update tat_deadline. Limit extensions to configurable count (default max 1).
+
+Dashboards & Metrics (precise per your final spec)
+
+QA/Ops Team Dashboard (Management view shows team aggregate; QA user sees only their own metrics):
+
+Total Gaps Raised (by team or user)
+
+Validated Gaps (Approved by Management)
+
+SOP Impact Index (how many reported gaps led to new/updated SOPs)
+
+Smoothness Score = (ValidatedGaps × 0.6) + (SOPImpact × 0.4)
+
+POC Dashboard (per-POC metrics):
+
+Assigned Gaps (count)
+
+Closed Gaps (count)
+
+TAT Breaches (count)
+
+Reopen Rate = ReopenedGaps / ClosedGaps (this metric applies ONLY to POC view)
+
+SOP Usage Rate (how often POC applied AI-suggested SOPs)
+
+Management & Admin Dashboard (holistic):
+
+Top Contributing QA Teams (by Smoothness Score)
+
+Top Reliable POCs (low reopen rate, low TAT breaches)
+
+AI Duplicate Flag Trends (how many were flagged vs merged)
+
+Department heatmap — recurring process areas
+
+Note: No average resolution time metric will be surfaced (per spec).
+
+UI / Pages (detailed)
+
+Auth: Login (seeded demo users), forgot password (email)
+
+Admin Panel: user/role mgmt, AI threshold config, TAT rules, SOP mgmt, export reports, view audit logs
+
+Management Dashboard: new submissions queue (AI-suggested panel), form builder, assignment UI (pick POC, priority, severity, tat_deadline), extension approvals, AI threshold slider
+
+Form Builder: drag/drop fields producing JSON schema (text, textarea, select, multi-select, file upload, tags)
+
+QA/Ops Panel: my-submissions list, create gap form (rich text, attachments drag/drop), view own gap detail + reopen if needed
+
+POC Panel: assigned list (sorted by Overdue → High priority), gap detail (threaded comments, upload evidence, request extension, mark resolved)
+
+Gap Detail Page: header with metadata, timeline & audit log, threaded comments (email-like), attachments gallery, AI panel with similar gaps + suggested SOP links, action buttons (Assign/Resolve/Request Extension/Reopen).
+
+Reports Page: export CSV/PDF, charts for the listed metrics.
+
+Seed Data & Demo Mode (required)
+
+Seed users: 1 Admin, 2 Management (Manager + TL), 2 QA/Ops users (different teams), 3 POCs.
+
+Seed 1 FormTemplate (e.g., “Refund Process Gap”), 1 SOP (SOP-21), and 6 sample gaps (include 1 pair intentionally similar to demonstrate AI flagging).
+
+Demo mode: if OPENROUTER_API_KEY missing, use deterministic mock similarity (e.g., keyword-based + TF-IDF) and show the AI panel with mock matches.
+
+Acceptance Criteria / Tests
+
+Authentication + RBAC enforced (unit tests): Admin vs Management vs QA vs POC boundaries.
+
+Form builder creates JSON schema templates used by gap submission form.
+
+Gap submission flows through AI similarity job (mock acceptable) and populates ai_matches + suggested_sop_id.
+
+Management can Assign → POC gets notified → POC can Resolve → Reporter gets Close email → Reporter can Reopen.
+
+TAT breach marks Overdue and triggers escalation emails.
+
+Reopen Rate calculation only for POC metrics.
+
+Seed data correctly loads and demo mode works without external AI keys.
+
+Basic UI tests for main views (Management Dashboard, POC panel, QA submission).
+
+Env Vars to Expect
+
+DATABASE_URL (Postgres)
+
+JWT_SECRET
+
+OPENROUTER_API_KEY (optional for dev/demo)
+
+S3_BUCKET, S3_ACCESS_KEY, S3_SECRET (or Firebase config)
+
+SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
+
+FRONTEND_URL, BACKEND_URL
+
+Dev & Deployment Notes
+
+Provide README with steps: prisma migrate, prisma seed, set env, run frontend & backend.
+
+Provide docker-compose (optional) with Postgres for local dev.
+
+Provide seed script to create demo accounts and sample gaps.
+
+Provide a simple script npm run demo to simulate AI-flagging if OpenRouter is absent.
+
+Provide instructions for one-click deploy to Vercel (frontend) + Render/Heroku (backend).
+
+Deliverables
+
+Repo with frontend/ and backend/ folders, README, prisma/schema.prisma, seed scripts, .env.example
+
+Working MVP (auth, RBAC, form builder, gap submission, AI suggestion mock or real, management assignment, POC execution, reopen, TAT escalation, dashboards).
+
+Minimal unit tests + manual test checklist.
+
+Priority Scope for an initial demo (if time-limited):
+
+Auth + RBAC middleware
+
+Form Builder (management)
+
+Gap Submission (QA/Ops) → AI mock similarity runs → management review
+
+Management Assignment → POC notification → POC resolution → Reopen flow
+
+TAT breach → Overdue status + email escalation
+
+QA-team & POC dashboards with the exact metrics specified (no avg TAT, reopen-rate only for POC)
+
+Tone & UX: Simple Gmail-like threaded comments for gaps, card-based lists, white & soft-gray UI, subtle gradients, mobile responsive.
