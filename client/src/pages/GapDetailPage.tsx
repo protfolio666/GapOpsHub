@@ -16,7 +16,7 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -55,7 +55,7 @@ export default function GapDetailPage() {
   const [resolutionSummary, setResolutionSummary] = useState("");
   const [resolutionAttachments, setResolutionAttachments] = useState<string[]>([]);
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
-  const resolutionFileInputRef = useState<HTMLInputElement | null>(null)[0];
+  const resolutionFileInputRef = useRef<HTMLInputElement | null>(null);
 
   const { data: gapData, isLoading } = useQuery<{ gap: GapWithRelations; reporter: any; assignee: any }>({
     queryKey: [`/api/gaps/${gapId}`],
@@ -387,16 +387,12 @@ export default function GapDetailPage() {
                       }}
                       multiple
                       className="hidden"
-                      ref={(el) => {
-                        if (el) {
-                          (resolutionFileInputRef as any) = el;
-                        }
-                      }}
+                      ref={resolutionFileInputRef}
                       data-testid="input-resolution-files-hidden"
                     />
                     <Button 
                       variant="outline" 
-                      onClick={() => (resolutionFileInputRef as any)?.click()}
+                      onClick={() => resolutionFileInputRef.current?.click()}
                       className="w-full"
                       type="button"
                       data-testid="button-upload-resolution-docs"
