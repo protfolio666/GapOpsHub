@@ -29,22 +29,23 @@ function Router({ user }: { user: PublicUser }) {
 
   return (
     <Switch>
-      <Route path={roleRoutes[user.role as keyof typeof roleRoutes]} component={
-        user.role === "Management" ? ManagementDashboard :
-        user.role === "POC" ? POCDashboard :
-        user.role === "QA/Ops" ? QAOpsDashboard :
-        ManagementDashboard
-      } />
+      <Route path="/admin" component={ManagementDashboard} />
+      <Route path="/management" component={ManagementDashboard} />
+      <Route path="/poc" component={POCDashboard} />
+      <Route path="/qa" component={QAOpsDashboard} />
       
+      <Route path="/admin/gaps/:id" component={GapDetailPage} />
       <Route path="/management/gaps/:id" component={GapDetailPage} />
       <Route path="/poc/gaps/:id" component={GapDetailPage} />
       <Route path="/qa/gaps/:id" component={GapDetailPage} />
       
       <Route path="/qa/new" component={GapSubmissionForm} />
       
+      <Route path="/admin/forms" component={FormBuilder} />
       <Route path="/management/forms" component={FormBuilder} />
       
       <Route path="/" component={
+        user.role === "Admin" ? ManagementDashboard :
         user.role === "Management" ? ManagementDashboard :
         user.role === "POC" ? POCDashboard :
         user.role === "QA/Ops" ? QAOpsDashboard :
