@@ -57,6 +57,10 @@ export default function GapDetailPage() {
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
   const resolutionFileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const { data: userData } = useQuery<{ user: any }>({
+    queryKey: ["/api/auth/me"],
+  });
+
   const { data: gapData, isLoading } = useQuery<{ gap: GapWithRelations; reporter: any; assignee: any }>({
     queryKey: [`/api/gaps/${gapId}`],
     enabled: !!gapId,
@@ -109,6 +113,26 @@ export default function GapDetailPage() {
       toast({
         title: "Error",
         description: error.message || "Failed to resolve gap. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const markInProgressMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("PATCH", `/api/gaps/${gapId}`, { status: "InProgress" });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/gaps/${gapId}`] });
+      toast({
+        title: "Success",
+        description: "Gap marked as in progress.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update gap status.",
         variant: "destructive",
       });
     },
@@ -351,6 +375,28 @@ export default function GapDetailPage() {
           </Card>
 
           <div className="space-y-2">
+            {userData?.user && gap?.status === "Assigned" && gap?.assignedToId === userData.user.id && (
+              <Button 
+                className="w-full" 
+                variant="default"
+                onClick={() => markInProgressMutation.mutate()}
+                disabled={markInProgressMutation.isPending}
+                data-testid="button-mark-in-progress"
+              >
+                {markInProgressMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  <>
+                    <Clock className="h-4 w-4 mr-2" />
+                    Mark as In Progress
+                  </>
+                )}
+              </Button>
+            )}
+            
             <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="w-full" data-testid="button-resolve-gap">
