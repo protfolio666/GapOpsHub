@@ -1070,6 +1070,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== ADMIN SETTINGS ====================
+  
+  app.get("/api/admin/settings", requireRole("Admin"), async (req, res) => {
+    try {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      const settingsPath = path.join(process.cwd(), "settings.json");
+      
+      try {
+        const data = await fs.readFile(settingsPath, "utf-8");
+        const settings = JSON.parse(data);
+        return res.json({ settings });
+      } catch (error) {
+        // Return default settings if file doesn't exist
+        return res.json({
+          settings: {
+            openrouterModel: process.env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free",
+          }
+        });
+      }
+    } catch (error) {
+      console.error("Get settings error:", error);
+      return res.status(500).json({ message: "Failed to get settings" });
+    }
+  });
+
+  app.patch("/api/admin/settings", requireRole("Admin"), async (req, res) => {
+    try {
+      const { openrouterModel } = req.body;
+      
+      if (!openrouterModel) {
+        return res.status(400).json({ message: "OpenRouter model is required" });
+      }
+
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      const settingsPath = path.join(process.cwd(), "settings.json");
+      
+      const settings = {
+        openrouterModel,
+        updatedAt: new Date().toISOString(),
+        updatedBy: req.session.userId,
+      };
+
+      await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2));
+      
+      // Update environment variable for immediate effect
+      process.env.OPENROUTER_MODEL = openrouterModel;
+      
+      return res.json({ settings });
+    } catch (error) {
+      console.error("Update settings error:", error);
+      return res.status(500).json({ message: "Failed to update settings" });
+    }
+  });
+
   // ==================== DASHBOARD METRICS ====================
   
   app.get("/api/dashboard/metrics", requireAuth, async (req, res) => {
