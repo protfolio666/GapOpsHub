@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import UserAvatar from "./UserAvatar";
 import { formatDistanceToNow } from "date-fns";
-import { Paperclip, Send } from "lucide-react";
+import { Paperclip, Send, Loader2 } from "lucide-react";
 import { useState } from "react";
 
 interface Comment {
@@ -16,17 +16,22 @@ interface Comment {
 
 interface CommentThreadProps {
   comments: Comment[];
-  onAddComment?: (content: string) => void;
+  onAddComment?: (content: string) => Promise<void>;
+  isSubmitting?: boolean;
 }
 
-export default function CommentThread({ comments, onAddComment }: CommentThreadProps) {
+export default function CommentThread({ comments, onAddComment, isSubmitting }: CommentThreadProps) {
   const [newComment, setNewComment] = useState("");
 
-  const handleSubmit = () => {
-    if (newComment.trim()) {
-      onAddComment?.(newComment);
-      setNewComment("");
-      console.log("Comment submitted:", newComment);
+  const handleSubmit = async () => {
+    if (newComment.trim() && onAddComment) {
+      try {
+        await onAddComment(newComment);
+        setNewComment("");
+      } catch (error) {
+        // Error handling is done in parent component
+        console.error("Comment submission error:", error);
+      }
     }
   };
 
@@ -70,13 +75,22 @@ export default function CommentThread({ comments, onAddComment }: CommentThreadP
             data-testid="input-comment"
           />
           <div className="flex justify-between items-center">
-            <Button variant="outline" size="sm" data-testid="button-attach-file">
+            <Button variant="outline" size="sm" data-testid="button-attach-file" disabled={isSubmitting}>
               <Paperclip className="h-4 w-4 mr-1" />
               Attach
             </Button>
-            <Button size="sm" onClick={handleSubmit} data-testid="button-submit-comment">
-              <Send className="h-4 w-4 mr-1" />
-              Comment
+            <Button size="sm" onClick={handleSubmit} disabled={isSubmitting || !newComment.trim()} data-testid="button-submit-comment">
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                  Posting...
+                </>
+              ) : (
+                <>
+                  <Send className="h-4 w-4 mr-1" />
+                  Comment
+                </>
+              )}
             </Button>
           </div>
         </div>

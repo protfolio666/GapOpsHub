@@ -6,7 +6,7 @@ import UserAvatar from "@/components/UserAvatar";
 import AISuggestionPanel from "@/components/AISuggestionPanel";
 import CommentThread from "@/components/CommentThread";
 import TimelineView from "@/components/TimelineView";
-import { ArrowLeft, CheckCircle, Clock, XCircle, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle, Clock, XCircle, Loader2, FileText, Paperclip } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,9 +14,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
-import type { Gap } from "@shared/schema";
+import { useEffect, useState } from "react";
+import { io, Socket } from "socket.io-client";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { Gap, Comment } from "@shared/schema";
 
 interface GapWithRelations extends Gap {
   reporter?: {
@@ -33,10 +37,21 @@ interface GapWithRelations extends Gap {
   };
 }
 
+interface CommentWithAuthor extends Comment {
+  author: {
+    id: number;
+    name: string;
+    email: string;
+    role: string;
+  } | null;
+}
+
 export default function GapDetailPage() {
   const [, params] = useRoute("/*/gaps/:id");
   const [, navigate] = useLocation();
   const gapId = params?.id;
+  const { toast } = useToast();
+  const [socket, setSocket] = useState<Socket | null>(null);
 
   const { data: gapData, isLoading } = useQuery<{ gap: GapWithRelations; reporter: any; assignee: any }>({
     queryKey: [`/api/gaps/${gapId}`],
@@ -47,6 +62,72 @@ export default function GapDetailPage() {
     queryKey: [`/api/gaps/${gapId}/similar`],
     enabled: !!gapId,
   });
+
+  const { data: commentsData } = useQuery<{ comments: CommentWithAuthor[] }>({
+    queryKey: [`/api/gaps/${gapId}/comments`],
+    enabled: !!gapId,
+  });
+
+  const addCommentMutation = useMutation({
+    mutationFn: async (content: string) => {
+      return await apiRequest(`/api/gaps/${gapId}/comments`, {
+        method: "POST",
+        body: JSON.stringify({ content }),
+        headers: { "Content-Type": "application/json" },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/api/gaps/${gapId}/comments`] });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to post comment. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Setup WebSocket connection for real-time comments
+  useEffect(() => {
+    if (!gapId) return;
+
+    const newSocket = io({
+      withCredentials: true,
+    });
+    setSocket(newSocket);
+
+    // Handle connection errors
+    newSocket.on("connect_error", (error) => {
+      console.error("WebSocket connection error:", error);
+      toast({
+        title: "Connection Issue",
+        description: "Real-time updates unavailable. Your comments will still be saved.",
+        variant: "destructive",
+      });
+    });
+
+    // Join gap-specific room
+    newSocket.on("connect", () => {
+      newSocket.emit("join-gap", gapId);
+    });
+
+    // Listen for new comments
+    newSocket.on("new-comment", (comment: CommentWithAuthor) => {
+      queryClient.setQueryData<{ comments: CommentWithAuthor[] }>(
+        [`/api/gaps/${gapId}/comments`],
+        (old) => {
+          if (!old) return { comments: [comment] };
+          return { comments: [...old.comments, comment] };
+        }
+      );
+    });
+
+    return () => {
+      newSocket.emit("leave-gap", gapId);
+      newSocket.close();
+    };
+  }, [gapId]);
 
   if (isLoading) {
     return (
@@ -92,6 +173,16 @@ export default function GapDetailPage() {
     gap.closedAt && { title: "Closed", timestamp: new Date(gap.closedAt), completed: true },
   ].filter(Boolean) as Array<{ title: string; timestamp: Date; completed: boolean }>;
 
+  const attachments = Array.isArray(gap.attachments) ? gap.attachments as string[] : [];
+
+  const comments = (commentsData?.comments || []).map((c) => ({
+    id: String(c.id),
+    author: c.author?.name || "Unknown",
+    content: c.content,
+    createdAt: new Date(c.createdAt),
+    attachments: Array.isArray(c.attachments) ? c.attachments as string[] : [],
+  }));
+
   return (
     <div className="space-y-6" data-testid="page-gap-detail">
       <div className="flex items-center gap-4">
@@ -110,14 +201,60 @@ export default function GapDetailPage() {
 
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-8 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Description</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm whitespace-pre-wrap">{gap.description}</p>
-            </CardContent>
-          </Card>
+          <Tabs defaultValue="details" className="w-full">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="details" data-testid="tab-details">Details</TabsTrigger>
+              <TabsTrigger value="attachments" data-testid="tab-attachments">
+                Attachments {attachments.length > 0 && `(${attachments.length})`}
+              </TabsTrigger>
+              <TabsTrigger value="discussion" data-testid="tab-discussion">
+                Discussion {comments.length > 0 && `(${comments.length})`}
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="details" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Description</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm whitespace-pre-wrap">{gap.description}</p>
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="attachments" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Attachments</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {attachments.length > 0 ? (
+                    <div className="space-y-2">
+                      {attachments.map((file, idx) => (
+                        <div key={idx} className="flex items-center gap-2 p-3 bg-muted rounded-md hover-elevate" data-testid={`attachment-${idx}`}>
+                          <FileText className="h-5 w-5 text-muted-foreground" />
+                          <span className="text-sm flex-1">{file}</span>
+                          <Button variant="ghost" size="sm" data-testid={`button-download-${idx}`}>
+                            Download
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No attachments uploaded</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+            <TabsContent value="discussion" className="mt-4">
+              <CommentThread 
+                comments={comments}
+                onAddComment={async (content) => {
+                  await addCommentMutation.mutateAsync(content);
+                }}
+                isSubmitting={addCommentMutation.isPending}
+              />
+            </TabsContent>
+          </Tabs>
         </div>
 
         <div className="col-span-4 space-y-6">
