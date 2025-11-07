@@ -29,9 +29,26 @@ export default function AllGapsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
+  const { data: userData } = useQuery<{ user: any }>({
+    queryKey: ["/api/auth/me"],
+  });
+
   const { data, isLoading } = useQuery<{ gaps: GapWithReporter[] }>({
     queryKey: ["/api/gaps"],
   });
+
+  // Get the base path for gap links based on user role
+  const getRoleBasePath = (role: string) => {
+    switch (role) {
+      case "Admin": return "/admin";
+      case "Management": return "/management";
+      case "POC": return "/poc";
+      case "QA/Ops": return "/qa";
+      default: return "/admin";
+    }
+  };
+
+  const basePath = userData?.user ? getRoleBasePath(userData.user.role) : "/admin";
 
   if (isLoading) {
     return (
@@ -135,7 +152,7 @@ export default function AllGapsPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2">
-                      <Link href={`/admin/gaps/${gap.id}`}>
+                      <Link href={`${basePath}/gaps/${gap.id}`}>
                         <span className="font-mono text-sm text-primary hover:underline cursor-pointer" data-testid={`text-gap-id-${gap.id}`}>
                           {gap.gapId}
                         </span>
@@ -144,7 +161,7 @@ export default function AllGapsPage() {
                       <PriorityIndicator priority={gap.priority as any} />
                     </div>
 
-                    <Link href={`/admin/gaps/${gap.id}`}>
+                    <Link href={`${basePath}/gaps/${gap.id}`}>
                       <h3 className="text-lg font-semibold mb-2 hover:text-primary cursor-pointer" data-testid={`text-gap-title-${gap.id}`}>
                         {gap.title}
                       </h3>
@@ -174,7 +191,7 @@ export default function AllGapsPage() {
                   </div>
 
                   <div className="flex flex-col items-end gap-2">
-                    <Link href={`/admin/gaps/${gap.id}`}>
+                    <Link href={`${basePath}/gaps/${gap.id}`}>
                       <Button variant="outline" size="sm" data-testid={`button-view-gap-${gap.id}`}>
                         View Details
                       </Button>
