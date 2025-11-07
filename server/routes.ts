@@ -412,10 +412,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validated = gaps.filter(g => ['Assigned', 'InProgress', 'Resolved', 'Closed'].includes(g.status)).length;
       const resolved = gaps.filter(g => ['Resolved', 'Closed'].includes(g.status)).length;
       
-      const allSops = await storage.getAllSops();
-      const sopImpact = allSops.filter(sop => 
-        gaps.some(gap => gap.id === sop.linkedGapId)
-      ).length;
+      // SOP impact will be calculated when gap-SOP linking is implemented
+      const sopImpact = 0;
 
       const smoothnessScore = totalRaised > 0 ? (validated / totalRaised) * 100 : 0;
 
