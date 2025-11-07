@@ -972,6 +972,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         reviewedAt: null,
       });
 
+      // Send email notification to management
+      const gap = await storage.getGap(Number(req.params.gapId));
+      const requester = await storage.getUser(req.session.userId!);
+      if (gap && requester) {
+        // Get all management/admin users
+        const managers = await storage.getUsersByRole("Management");
+        const admins = await storage.getUsersByRole("Admin");
+        const allManagers = [...managers, ...admins];
+        
+        // Send to all managers/admins
+        for (const manager of allManagers) {
+          await sendTATExtensionRequestEmail(
+            manager.name,
+            manager.email,
+            gap.gapId,
+            gap.title,
+            requester.name,
+            reason,
+            new Date(requestedDeadline)
+          );
+        }
+      }
+
       return res.json({ extension });
     } catch (error) {
       console.error("Create TAT extension error:", error);
