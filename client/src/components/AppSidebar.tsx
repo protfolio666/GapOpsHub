@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useMutation } from "@tanstack/react-query";
 import { authApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { queryClient } from "@/lib/queryClient";
 
 interface AppSidebarProps {
   userRole: "Admin" | "Management" | "QA/Ops" | "POC";
@@ -45,10 +46,15 @@ export default function AppSidebar({ userRole, userName }: AppSidebarProps) {
   const logoutMutation = useMutation({
     mutationFn: () => authApi.logout(),
     onSuccess: () => {
+      // Clear all React Query cache
+      queryClient.clear();
+      
       toast({
         title: "Logged Out",
         description: "You have been successfully logged out.",
       });
+      
+      // Navigate to login page
       navigate("/login");
     },
     onError: () => {
