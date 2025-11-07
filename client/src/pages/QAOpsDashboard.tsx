@@ -12,38 +12,7 @@ export default function QAOpsDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
-  const mockSubmissions = [
-    {
-      id: "GAP-1220",
-      title: "Documentation missing for emergency escalation process",
-      description: "Support team lacks clear guidelines for critical escalations.",
-      status: "Closed" as const,
-      priority: "High" as const,
-      reporter: "Sarah Chen",
-      assignedTo: "Mike Torres",
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
-    },
-    {
-      id: "GAP-1189",
-      title: "Product return workflow inconsistent across channels",
-      description: "Different return policies applied in-store vs online.",
-      status: "InProgress" as const,
-      priority: "Medium" as const,
-      reporter: "Sarah Chen",
-      assignedTo: "Lisa Park",
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
-    },
-    {
-      id: "GAP-1156",
-      title: "Customer data export request handling unclear",
-      description: "GDPR compliance process not documented properly.",
-      status: "Assigned" as const,
-      priority: "High" as const,
-      reporter: "Sarah Chen",
-      assignedTo: "David Kim",
-      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12),
-    },
-  ];
+  const mockSubmissions: any[] = [];
 
   const statuses = ["All", "Assigned", "InProgress", "Resolved", "Closed"];
 
