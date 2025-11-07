@@ -70,11 +70,7 @@ export default function GapDetailPage() {
 
   const addCommentMutation = useMutation({
     mutationFn: async (content: string) => {
-      return await apiRequest(`/api/gaps/${gapId}/comments`, {
-        method: "POST",
-        body: JSON.stringify({ content }),
-        headers: { "Content-Type": "application/json" },
-      });
+      return await apiRequest("POST", `/api/gaps/${gapId}/comments`, { content });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/gaps/${gapId}/comments`] });
