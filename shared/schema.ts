@@ -35,6 +35,8 @@ export const gaps = pgTable("gaps", {
   templateVersion: varchar("template_version", { length: 20 }), // Capture template version at submission
   formResponsesJson: jsonb("form_responses_json"), // Structured form responses
   tatDeadline: timestamp("tat_deadline"),
+  assignedAt: timestamp("assigned_at"),
+  inProgressAt: timestamp("in_progress_at"),
   resolvedAt: timestamp("resolved_at"),
   closedAt: timestamp("closed_at"),
   reopenedAt: timestamp("reopened_at"),
@@ -52,6 +54,8 @@ export const insertGapSchema = createInsertSchema(gaps).omit({
   createdAt: true, 
   updatedAt: true,
   gapId: true,
+  assignedAt: true,
+  inProgressAt: true,
   resolvedAt: true,
   closedAt: true,
   reopenedAt: true,

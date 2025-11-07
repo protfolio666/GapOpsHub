@@ -266,6 +266,8 @@ export default function GapDetailPage() {
   // Build timeline events - only show events with accurate dedicated timestamps
   const timelineEvents = [
     { title: "Gap Created", timestamp: new Date(gap.createdAt), completed: true },
+    gap.assignedAt && { title: "Assigned to POC", timestamp: new Date(gap.assignedAt), completed: true },
+    gap.inProgressAt && { title: "In Progress", timestamp: new Date(gap.inProgressAt), completed: true },
     gap.resolvedAt && { title: "Resolved", timestamp: new Date(gap.resolvedAt), completed: true },
     gap.reopenedAt && { title: "Reopened", timestamp: new Date(gap.reopenedAt), completed: true },
     gap.closedAt && { title: "Closed", timestamp: new Date(gap.closedAt), completed: true },
@@ -330,7 +332,7 @@ export default function GapDetailPage() {
                       <p className="text-sm whitespace-pre-wrap text-muted-foreground">{gap.resolutionSummary}</p>
                     </div>
                     
-                    {gap.resolutionAttachments && Array.isArray(gap.resolutionAttachments) && gap.resolutionAttachments.length > 0 && (
+                    {gap.resolutionAttachments && Array.isArray(gap.resolutionAttachments) && gap.resolutionAttachments.length > 0 ? (
                       <div>
                         <h4 className="text-sm font-medium mb-2">Supporting Documents</h4>
                         <div className="space-y-2">
@@ -365,7 +367,7 @@ export default function GapDetailPage() {
                           })}
                         </div>
                       </div>
-                    )}
+                    ) : null}
                   </CardContent>
                 </Card>
               )}

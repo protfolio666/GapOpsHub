@@ -826,7 +826,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // If title or description changed, invalidate similarity cache
       const hasContentChange = req.body.title || req.body.description;
       
-      const gap = await storage.updateGap(Number(req.params.id), req.body);
+      // If status is changing to InProgress, set inProgressAt timestamp
+      const updateData = { ...req.body };
+      if (req.body.status === "InProgress") {
+        updateData.inProgressAt = new Date();
+      }
+      
+      const gap = await storage.updateGap(Number(req.params.id), updateData);
       if (!gap) {
         return res.status(404).json({ message: "Gap not found" });
       }
@@ -884,6 +890,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         assignedToId,
         tatDeadline: tatDeadline ? new Date(tatDeadline) : null,
         status: "Assigned",
+        assignedAt: new Date(),
       });
 
       if (!gap) {
