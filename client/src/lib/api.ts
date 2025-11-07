@@ -4,8 +4,8 @@ import type { User, Gap, Comment, Sop, FormTemplate, FormField } from "@shared/s
 // ==================== AUTH API ====================
 
 export const authApi = {
-  login: async (email: string, name: string, role: string) => {
-    const response = await apiRequest("POST", "/api/auth/login", { email, name, role });
+  login: async (email: string, password: string) => {
+    const response = await apiRequest("POST", "/api/auth/login", { email, password });
     return response as { user: User };
   },
 

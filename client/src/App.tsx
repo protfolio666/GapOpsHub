@@ -78,13 +78,9 @@ function App() {
     checkAuth();
   }, []);
 
-  const handleLogin = async (email: string, role: string) => {
+  const handleLogin = async (email: string, password: string) => {
     try {
-      const name = email.split("@")[0].split(".").map(n => 
-        n.charAt(0).toUpperCase() + n.slice(1)
-      ).join(" ");
-      
-      const response = await authApi.login(email, name, role);
+      const response = await authApi.login(email, password);
       setUser(response.user);
       
       const roleRoutes = {
@@ -94,7 +90,7 @@ function App() {
         POC: "/poc",
       };
       
-      setLocation(roleRoutes[role as keyof typeof roleRoutes]);
+      setLocation(roleRoutes[response.user.role as keyof typeof roleRoutes]);
       
       toast({
         title: "Logged in successfully",
@@ -104,7 +100,7 @@ function App() {
       toast({
         variant: "destructive",
         title: "Login failed",
-        description: "Unable to log in. Please try again.",
+        description: "Please check your email and password.",
       });
     }
   };
