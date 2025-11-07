@@ -1,12 +1,12 @@
 import { apiRequest } from "./queryClient";
-import type { User, Gap, Comment, Sop, FormTemplate, FormField } from "@shared/schema";
+import type { PublicUser, Gap, Comment, Sop, FormTemplate, FormField } from "@shared/schema";
 
 // ==================== AUTH API ====================
 
 export const authApi = {
   login: async (email: string, password: string) => {
     const response = await apiRequest("POST", "/api/auth/login", { email, password });
-    return response as { user: User };
+    return response as { user: PublicUser };
   },
 
   logout: async () => {
@@ -15,7 +15,7 @@ export const authApi = {
 
   getMe: async () => {
     const response = await apiRequest("GET", "/api/auth/me");
-    return response as { user: User };
+    return response as { user: PublicUser };
   },
 };
 
@@ -24,12 +24,12 @@ export const authApi = {
 export const userApi = {
   getAll: async () => {
     const response = await apiRequest("GET", "/api/users");
-    return response as { users: User[] };
+    return response as { users: PublicUser[] };
   },
 
   getByRole: async (role: string) => {
     const response = await apiRequest("GET", `/api/users/role/${role}`);
-    return response as { users: User[] };
+    return response as { users: PublicUser[] };
   },
 };
 
@@ -49,7 +49,7 @@ export const gapApi = {
 
   getById: async (id: number) => {
     const response = await apiRequest("GET", `/api/gaps/${id}`);
-    return response as { gap: Gap; reporter: User; assignee: User | null };
+    return response as { gap: Gap; reporter: PublicUser; assignee: PublicUser | null };
   },
 
   create: async (gap: {
@@ -99,7 +99,7 @@ export const gapApi = {
 export const commentApi = {
   getByGap: async (gapId: number) => {
     const response = await apiRequest("GET", `/api/gaps/${gapId}/comments`);
-    return response as { comments: Array<Comment & { author: User }> };
+    return response as { comments: Array<Comment & { author: PublicUser }> };
   },
 
   create: async (gapId: number, content: string, attachments?: string[]) => {
@@ -107,7 +107,7 @@ export const commentApi = {
       content,
       attachments: attachments || [],
     });
-    return response as { comment: Comment & { author: User } };
+    return response as { comment: Comment & { author: PublicUser } };
   },
 };
 

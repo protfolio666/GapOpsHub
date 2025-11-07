@@ -15,11 +15,11 @@ import GapDetailPage from "@/pages/GapDetailPage";
 import GapSubmissionForm from "@/pages/GapSubmissionForm";
 import FormBuilder from "@/components/FormBuilder";
 import NotFound from "@/pages/not-found";
-import type { User } from "@shared/schema";
+import type { PublicUser } from "@shared/schema";
 import { authApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 
-function Router({ user }: { user: User }) {
+function Router({ user }: { user: PublicUser }) {
   const roleRoutes = {
     Admin: "/admin",
     Management: "/management",
@@ -57,7 +57,7 @@ function Router({ user }: { user: User }) {
 }
 
 function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<PublicUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [, setLocation] = useLocation();
   const { toast } = useToast();
