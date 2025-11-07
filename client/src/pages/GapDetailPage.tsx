@@ -263,16 +263,16 @@ export default function GapDetailPage() {
     reasoning: string;
   }> : [];
 
-  // Build timeline events from gap data
+  // Build timeline events from gap data and sort by timestamp
   const timelineEvents = [
     { title: "Gap Created", timestamp: new Date(gap.createdAt), completed: true },
     gap.aiProcessed && { title: "AI Review Completed", timestamp: new Date(gap.updatedAt), completed: true },
     gap.assignedToId && { title: "Assigned to POC", timestamp: new Date(gap.updatedAt), completed: true },
     (gap.status === "InProgress" || gap.status === "Resolved" || gap.status === "Closed") && { title: "In Progress", timestamp: new Date(gap.updatedAt), completed: true },
-    gap.reopenedAt && { title: "Reopened", timestamp: new Date(gap.reopenedAt), completed: true },
     gap.resolvedAt && { title: "Resolved", timestamp: new Date(gap.resolvedAt), completed: true },
+    gap.reopenedAt && { title: "Reopened", timestamp: new Date(gap.reopenedAt), completed: true },
     gap.closedAt && { title: "Closed", timestamp: new Date(gap.closedAt), completed: true },
-  ].filter(Boolean) as Array<{ title: string; timestamp: Date; completed: boolean }>;
+  ].filter(Boolean).sort((a: any, b: any) => a.timestamp.getTime() - b.timestamp.getTime()) as Array<{ title: string; timestamp: Date; completed: boolean }>;
 
   const attachments = Array.isArray(gap.attachments) ? gap.attachments as string[] : [];
 
