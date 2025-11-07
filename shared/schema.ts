@@ -179,3 +179,22 @@ export const insertSimilarGapSchema = createInsertSchema(similarGaps).omit({
 });
 export type InsertSimilarGap = z.infer<typeof insertSimilarGapSchema>;
 export type SimilarGap = typeof similarGaps.$inferSelect;
+
+export const auditLogs = pgTable("audit_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  action: varchar("action", { length: 100 }).notNull(), // CREATE, UPDATE, DELETE, LOGIN, LOGOUT, ASSIGN, etc.
+  entityType: varchar("entity_type", { length: 50 }).notNull(), // gap, user, sop, comment, etc.
+  entityId: integer("entity_id"),
+  changes: jsonb("changes"), // What changed (before/after values)
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({ 
+  id: true, 
+  createdAt: true 
+});
+export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
+export type AuditLog = typeof auditLogs.$inferSelect;

@@ -1,12 +1,12 @@
 import { db } from "./db";
 import { 
   users, gaps, comments, sops, formTemplates, formFields, 
-  gapAssignments, tatExtensions, similarGaps,
+  gapAssignments, tatExtensions, similarGaps, auditLogs,
   type User, type InsertUser, type Gap, type InsertGap,
   type Comment, type InsertComment, type Sop, type InsertSop,
   type FormTemplate, type InsertFormTemplate, type FormField, type InsertFormField,
   type GapAssignment, type InsertGapAssignment, type TatExtension, type InsertTatExtension,
-  type SimilarGap, type InsertSimilarGap
+  type SimilarGap, type InsertSimilarGap, type AuditLog, type InsertAuditLog
 } from "@shared/schema";
 import { eq, desc, and, sql, or } from "drizzle-orm";
 
@@ -75,6 +75,12 @@ export interface IStorage {
   getSimilarGaps(gapId: number, minScore?: number): Promise<SimilarGap[]>;
   createSimilarGap(similarGap: InsertSimilarGap): Promise<SimilarGap>;
   deleteSimilarGapsByGapId(gapId: number): Promise<boolean>;
+  
+  // Audit Log operations
+  getAuditLogs(limit?: number): Promise<AuditLog[]>;
+  getAuditLogsByUser(userId: number, limit?: number): Promise<AuditLog[]>;
+  getAuditLogsByEntity(entityType: string, entityId: number, limit?: number): Promise<AuditLog[]>;
+  createAuditLog(auditLog: InsertAuditLog): Promise<AuditLog>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -363,6 +369,43 @@ export class DatabaseStorage implements IStorage {
       or(eq(similarGaps.gapId, gapId), eq(similarGaps.similarGapId, gapId))
     );
     return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Audit Log operations
+  async getAuditLogs(limit: number = 100): Promise<AuditLog[]> {
+    return await db
+      .select()
+      .from(auditLogs)
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(limit);
+  }
+
+  async getAuditLogsByUser(userId: number, limit: number = 100): Promise<AuditLog[]> {
+    return await db
+      .select()
+      .from(auditLogs)
+      .where(eq(auditLogs.userId, userId))
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(limit);
+  }
+
+  async getAuditLogsByEntity(entityType: string, entityId: number, limit: number = 100): Promise<AuditLog[]> {
+    return await db
+      .select()
+      .from(auditLogs)
+      .where(
+        and(
+          eq(auditLogs.entityType, entityType),
+          eq(auditLogs.entityId, entityId)
+        )
+      )
+      .orderBy(desc(auditLogs.createdAt))
+      .limit(limit);
+  }
+
+  async createAuditLog(auditLog: InsertAuditLog): Promise<AuditLog> {
+    const [newAuditLog] = await db.insert(auditLogs).values(auditLog).returning();
+    return newAuditLog;
   }
 }
 
