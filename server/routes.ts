@@ -1034,6 +1034,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== AUDIT LOG ROUTES ====================
+  
+  app.get("/api/audit-logs", requireRole("Admin"), async (req, res) => {
+    try {
+      const { limit = 100, userId, entityType, entityId } = req.query;
+      
+      let logs;
+      
+      if (userId) {
+        logs = await storage.getAuditLogsByUser(Number(userId), Number(limit));
+      } else if (entityType && entityId) {
+        logs = await storage.getAuditLogsByEntity(
+          entityType as string, 
+          Number(entityId), 
+          Number(limit)
+        );
+      } else {
+        logs = await storage.getAuditLogs(Number(limit));
+      }
+      
+      // Enrich with user information
+      const enrichedLogs = await Promise.all(logs.map(async (log) => {
+        const user = log.userId ? await storage.getUser(log.userId) : null;
+        return {
+          ...log,
+          user: user ? sanitizeUser(user) : null,
+        };
+      }));
+      
+      return res.json({ logs: enrichedLogs });
+    } catch (error) {
+      console.error("Get audit logs error:", error);
+      return res.status(500).json({ message: "Failed to get audit logs" });
+    }
+  });
+
   // ==================== DASHBOARD METRICS ====================
   
   app.get("/api/dashboard/metrics", requireAuth, async (req, res) => {
