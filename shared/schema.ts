@@ -1,18 +1,168 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, serial, varchar, jsonb, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
 export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
+  id: serial("id").primaryKey(),
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
+  role: varchar("role", { length: 50 }).notNull(), // Admin, Management, QA/Ops, POC
+  department: varchar("department", { length: 100 }),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-});
-
+export const insertUserSchema = createInsertSchema(users).omit({ id: true, createdAt: true });
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
+
+export const gaps = pgTable("gaps", {
+  id: serial("id").primaryKey(),
+  gapId: varchar("gap_id", { length: 50 }).notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description").notNull(),
+  status: varchar("status", { length: 50 }).notNull().default("PendingAI"), // PendingAI, NeedsReview, Assigned, InProgress, Overdue, Resolved, Closed, Reopened
+  priority: varchar("priority", { length: 50 }).notNull().default("Medium"), // High, Medium, Low
+  severity: varchar("severity", { length: 50 }),
+  department: varchar("department", { length: 100 }),
+  reporterId: integer("reporter_id").references(() => users.id).notNull(),
+  assignedToId: integer("assigned_to_id").references(() => users.id),
+  tatDeadline: timestamp("tat_deadline"),
+  resolvedAt: timestamp("resolved_at"),
+  closedAt: timestamp("closed_at"),
+  reopenedAt: timestamp("reopened_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  aiProcessed: boolean("ai_processed").default(false),
+  attachments: jsonb("attachments").default([]),
+});
+
+export const insertGapSchema = createInsertSchema(gaps).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true,
+  gapId: true,
+});
+export type InsertGap = z.infer<typeof insertGapSchema>;
+export type Gap = typeof gaps.$inferSelect;
+
+export const comments = pgTable("comments", {
+  id: serial("id").primaryKey(),
+  gapId: integer("gap_id").references(() => gaps.id).notNull(),
+  authorId: integer("author_id").references(() => users.id).notNull(),
+  content: text("content").notNull(),
+  attachments: jsonb("attachments").default([]),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertCommentSchema = createInsertSchema(comments).omit({ id: true, createdAt: true });
+export type InsertComment = z.infer<typeof insertCommentSchema>;
+export type Comment = typeof comments.$inferSelect;
+
+export const sops = pgTable("sops", {
+  id: serial("id").primaryKey(),
+  sopId: varchar("sop_id", { length: 50 }).notNull().unique(),
+  title: text("title").notNull(),
+  description: text("description"),
+  content: text("content").notNull(),
+  category: varchar("category", { length: 100 }),
+  department: varchar("department", { length: 100 }),
+  version: varchar("version", { length: 20 }).default("1.0"),
+  createdById: integer("created_by_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  active: boolean("active").default(true),
+});
+
+export const insertSopSchema = createInsertSchema(sops).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true,
+  sopId: true,
+});
+export type InsertSop = z.infer<typeof insertSopSchema>;
+export type Sop = typeof sops.$inferSelect;
+
+export const formTemplates = pgTable("form_templates", {
+  id: serial("id").primaryKey(),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  department: varchar("department", { length: 100 }),
+  createdById: integer("created_by_id").references(() => users.id).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  active: boolean("active").default(true),
+});
+
+export const insertFormTemplateSchema = createInsertSchema(formTemplates).omit({ 
+  id: true, 
+  createdAt: true, 
+  updatedAt: true 
+});
+export type InsertFormTemplate = z.infer<typeof insertFormTemplateSchema>;
+export type FormTemplate = typeof formTemplates.$inferSelect;
+
+export const formFields = pgTable("form_fields", {
+  id: serial("id").primaryKey(),
+  templateId: integer("template_id").references(() => formTemplates.id).notNull(),
+  fieldType: varchar("field_type", { length: 50 }).notNull(), // text, textarea, select, multiselect, file
+  label: text("label").notNull(),
+  required: boolean("required").default(false),
+  options: jsonb("options"), // for select/multiselect
+  order: integer("order").notNull(),
+});
+
+export const insertFormFieldSchema = createInsertSchema(formFields).omit({ id: true });
+export type InsertFormField = z.infer<typeof insertFormFieldSchema>;
+export type FormField = typeof formFields.$inferSelect;
+
+export const gapAssignments = pgTable("gap_assignments", {
+  id: serial("id").primaryKey(),
+  gapId: integer("gap_id").references(() => gaps.id).notNull(),
+  assignedToId: integer("assigned_to_id").references(() => users.id).notNull(),
+  assignedById: integer("assigned_by_id").references(() => users.id).notNull(),
+  assignedAt: timestamp("assigned_at").defaultNow().notNull(),
+  notes: text("notes"),
+});
+
+export const insertGapAssignmentSchema = createInsertSchema(gapAssignments).omit({ 
+  id: true, 
+  assignedAt: true 
+});
+export type InsertGapAssignment = z.infer<typeof insertGapAssignmentSchema>;
+export type GapAssignment = typeof gapAssignments.$inferSelect;
+
+export const tatExtensions = pgTable("tat_extensions", {
+  id: serial("id").primaryKey(),
+  gapId: integer("gap_id").references(() => gaps.id).notNull(),
+  requestedById: integer("requested_by_id").references(() => users.id).notNull(),
+  reason: text("reason").notNull(),
+  requestedDeadline: timestamp("requested_deadline").notNull(),
+  status: varchar("status", { length: 50 }).notNull().default("Pending"), // Pending, Approved, Rejected
+  reviewedById: integer("reviewed_by_id").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertTatExtensionSchema = createInsertSchema(tatExtensions).omit({ 
+  id: true, 
+  createdAt: true 
+});
+export type InsertTatExtension = z.infer<typeof insertTatExtensionSchema>;
+export type TatExtension = typeof tatExtensions.$inferSelect;
+
+export const similarGaps = pgTable("similar_gaps", {
+  id: serial("id").primaryKey(),
+  gapId: integer("gap_id").references(() => gaps.id).notNull(),
+  similarGapId: integer("similar_gap_id").references(() => gaps.id).notNull(),
+  similarityScore: integer("similarity_score").notNull(), // 0-100
+  calculatedAt: timestamp("calculated_at").defaultNow().notNull(),
+}, (table) => ({
+  uniquePair: unique().on(table.gapId, table.similarGapId),
+}));
+
+export const insertSimilarGapSchema = createInsertSchema(similarGaps).omit({ 
+  id: true, 
+  calculatedAt: true 
+});
+export type InsertSimilarGap = z.infer<typeof insertSimilarGapSchema>;
+export type SimilarGap = typeof similarGaps.$inferSelect;
