@@ -268,7 +268,8 @@ export default function GapDetailPage() {
     { title: "Gap Created", timestamp: new Date(gap.createdAt), completed: true },
     gap.aiProcessed && { title: "AI Review Completed", timestamp: new Date(gap.updatedAt), completed: true },
     gap.assignedToId && { title: "Assigned to POC", timestamp: new Date(gap.updatedAt), completed: true },
-    gap.status === "InProgress" && { title: "In Progress", timestamp: new Date(gap.updatedAt), completed: true },
+    (gap.status === "InProgress" || gap.status === "Resolved" || gap.status === "Closed") && { title: "In Progress", timestamp: new Date(gap.updatedAt), completed: true },
+    gap.reopenedAt && { title: "Reopened", timestamp: new Date(gap.reopenedAt), completed: true },
     gap.resolvedAt && { title: "Resolved", timestamp: new Date(gap.resolvedAt), completed: true },
     gap.closedAt && { title: "Closed", timestamp: new Date(gap.closedAt), completed: true },
   ].filter(Boolean) as Array<{ title: string; timestamp: Date; completed: boolean }>;
@@ -311,7 +312,7 @@ export default function GapDetailPage() {
                 Discussion {comments.length > 0 && `(${comments.length})`}
               </TabsTrigger>
             </TabsList>
-            <TabsContent value="details" className="mt-4">
+            <TabsContent value="details" className="mt-4 space-y-4">
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Description</CardTitle>
@@ -320,6 +321,57 @@ export default function GapDetailPage() {
                   <p className="text-sm whitespace-pre-wrap">{gap.description}</p>
                 </CardContent>
               </Card>
+
+              {(gap.status === "Resolved" || gap.status === "Closed") && gap.resolutionSummary && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base">Resolution</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div>
+                      <h4 className="text-sm font-medium mb-2">Resolution Summary</h4>
+                      <p className="text-sm whitespace-pre-wrap text-muted-foreground">{gap.resolutionSummary}</p>
+                    </div>
+                    
+                    {gap.resolutionAttachments && Array.isArray(gap.resolutionAttachments) && gap.resolutionAttachments.length > 0 && (
+                      <div>
+                        <h4 className="text-sm font-medium mb-2">Supporting Documents</h4>
+                        <div className="space-y-2">
+                          {gap.resolutionAttachments.map((file: any, idx) => {
+                            const isFileObject = typeof file === "object" && file.path;
+                            const displayName = isFileObject ? file.originalName : file;
+                            let downloadPath = isFileObject ? file.path : null;
+                            const isImage = isFileObject && file.mimetype?.startsWith("image/");
+                            
+                            if (downloadPath && gapId) {
+                              downloadPath = `${downloadPath}?gapId=${gapId}`;
+                            }
+                            
+                            return (
+                              <div key={idx} className="flex items-center gap-2 p-3 bg-muted rounded-md hover-elevate" data-testid={`resolution-attachment-display-${idx}`}>
+                                <FileText className="h-5 w-5 text-muted-foreground" />
+                                <span className="text-sm flex-1">{displayName}</span>
+                                {downloadPath && (
+                                  <a
+                                    href={downloadPath}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    download={displayName}
+                                  >
+                                    <Button variant="ghost" size="sm" data-testid={`button-download-resolution-${idx}`}>
+                                      {isImage ? "View" : "Download"}
+                                    </Button>
+                                  </a>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
             </TabsContent>
             <TabsContent value="attachments" className="mt-4">
               <Card>
@@ -481,7 +533,8 @@ export default function GapDetailPage() {
               </Button>
             )}
             
-            {userData?.user && ["Management", "Admin"].includes(userData.user.role) && (
+            {userData?.user && ["Management", "Admin"].includes(userData.user.role) && 
+             gap && gap.status !== "Resolved" && gap.status !== "Closed" && (
               <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
                 <DialogTrigger asChild>
                   <Button className="w-full" data-testid="button-resolve-gap">
