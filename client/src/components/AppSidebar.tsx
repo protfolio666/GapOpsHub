@@ -16,6 +16,7 @@ interface AppSidebarProps {
 const menuItems = {
   Admin: [
     { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
+    { title: "All Gaps", url: "/admin/gaps", icon: FileText },
     { title: "Users & Roles", url: "/admin/users", icon: Users },
     { title: "Form Builder", url: "/admin/form-builder", icon: FormInput },
     { title: "SOPs", url: "/admin/sops", icon: BookOpen },

@@ -167,7 +167,7 @@ export default function AdminSettingsPage() {
               <div className="flex items-center justify-between">
                 <span className="text-sm">SendGrid Integration</span>
                 <span className="text-sm font-medium text-muted-foreground">
-                  {process.env.SENDGRID_API_KEY ? "✓ Configured" : "Not configured"}
+                  Check server logs
                 </span>
               </div>
               <p className="text-sm text-muted-foreground">
