@@ -260,7 +260,25 @@ Any email can be used with role selection for demo purposes.
 
 ## Recent Changes
 
-### November 7, 2025
+### November 7, 2025 (Latest)
+- **Dynamic Form Submission**: Fully integrated Form Builder templates with Gap Submission workflow
+  - QA/Ops users can now select form templates when submitting gaps
+  - DynamicFormRenderer component handles all advanced features:
+    - Nested dropdowns (up to 4 levels) with cascade clearing
+    - Conditional question/section visibility based on controlling values
+    - Repeatable sections with add/remove instances and proper cleanup
+    - All question types: text, number, date, dropdown, multiSelect, file
+    - Fatal questions, weightage badges, and remarks fields
+  - Smart validation that accounts for visibility rules and repeatable instances
+  - Template-linked gap storage with formTemplateId, templateVersion, formResponsesJson
+  - Auto-generation of title/description from form responses
+- **Logout Feature**: Added logout button to sidebar footer with proper session cleanup
+- **Bug Fixes**: 
+  - Fixed conditional visibility to read from dependent question's visibleOnValues
+  - Fixed validation to skip hidden fields and handle all repeatable instances
+  - Fixed repeatable section cleanup to remove stale responses
+
+### November 7, 2025 (Earlier)
 - **Backend Implementation**: Complete API routes for all features
 - **Database Schema**: Drizzle ORM schema with 9 core tables
 - **Authentication**: Session-based auth with role-based access control
