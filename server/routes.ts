@@ -362,10 +362,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/gaps", requireAuth, async (req, res) => {
     try {
-      const { title, description, department, priority, severity, attachments } = req.body;
+      const { 
+        title, 
+        description, 
+        department, 
+        priority, 
+        severity, 
+        attachments,
+        formTemplateId,
+        templateVersion,
+        formResponsesJson 
+      } = req.body;
 
       if (!title || !description) {
         return res.status(400).json({ message: "Title and description are required" });
+      }
+
+      // If template-based, validate template exists
+      if (formTemplateId) {
+        const template = await storage.getFormTemplate(formTemplateId);
+        if (!template) {
+          return res.status(400).json({ message: "Invalid form template" });
+        }
       }
 
       const gap = await storage.createGap({
@@ -376,6 +394,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         severity: severity || null,
         reporterId: req.session.userId!,
         assignedToId: null,
+        formTemplateId: formTemplateId || null,
+        templateVersion: templateVersion || null,
+        formResponsesJson: formResponsesJson || null,
         tatDeadline: null,
         resolvedAt: null,
         closedAt: null,
