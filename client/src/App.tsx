@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Switch, Route, useLocation } from "wouter";
+import { Switch, Route, useLocation, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -14,10 +14,27 @@ import QAOpsDashboard from "@/pages/QAOpsDashboard";
 import GapDetailPage from "@/pages/GapDetailPage";
 import GapSubmissionForm from "@/pages/GapSubmissionForm";
 import FormBuilder from "@/components/FormBuilder";
+import UserManagementPage from "@/pages/UserManagementPage";
 import NotFound from "@/pages/not-found";
 import type { PublicUser } from "@shared/schema";
 import { authApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+
+// Protected route component that checks user role
+function ProtectedRoute({ 
+  user, 
+  allowedRoles, 
+  component: Component 
+}: { 
+  user: PublicUser; 
+  allowedRoles: string[];
+  component: React.ComponentType;
+}) {
+  if (!allowedRoles.includes(user.role)) {
+    return <Redirect to="/" />;
+  }
+  return <Component />;
+}
 
 function Router({ user }: { user: PublicUser }) {
   const roleRoutes = {
@@ -33,6 +50,10 @@ function Router({ user }: { user: PublicUser }) {
       <Route path="/management" component={ManagementDashboard} />
       <Route path="/poc" component={POCDashboard} />
       <Route path="/qa" component={QAOpsDashboard} />
+      
+      <Route path="/admin/users">
+        <ProtectedRoute user={user} allowedRoles={["Admin"]} component={UserManagementPage} />
+      </Route>
       
       <Route path="/admin/gaps/:id" component={GapDetailPage} />
       <Route path="/management/gaps/:id" component={GapDetailPage} />

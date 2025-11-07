@@ -17,6 +17,8 @@ export interface IStorage {
   createUser(user: InsertUser): Promise<User>;
   getAllUsers(): Promise<User[]>;
   getUsersByRole(role: string): Promise<User[]>;
+  updateUser(id: number, updates: Partial<User>): Promise<User>;
+  deleteUser(id: number): Promise<boolean>;
 
   // Gap operations
   getGap(id: number): Promise<Gap | undefined>;
@@ -96,6 +98,19 @@ export class DatabaseStorage implements IStorage {
 
   async getUsersByRole(role: string): Promise<User[]> {
     return await db.select().from(users).where(eq(users.role, role));
+  }
+
+  async updateUser(id: number, updates: Partial<User>): Promise<User> {
+    const [updatedUser] = await db.update(users)
+      .set(updates)
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  async deleteUser(id: number): Promise<boolean> {
+    await db.delete(users).where(eq(users.id, id));
+    return true;
   }
 
   // Gap operations

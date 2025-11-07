@@ -4,6 +4,17 @@ import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import { authenticateUser, createUser, hashPassword, requireAuth, requireRole, attachUser, sanitizeUser } from "./auth";
 import { calculateSimilarity, findSimilarGaps } from "./ai-similarity";
+import { z } from "zod";
+import bcrypt from "bcryptjs";
+
+// Validation schemas
+const updateUserSchema = z.object({
+  email: z.string().email().optional(),
+  name: z.string().min(1).optional(),
+  role: z.enum(["Admin", "Management", "QA/Ops", "POC"]).optional(),
+  department: z.string().nullable().optional(),
+  password: z.string().min(8).optional(),
+});
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
@@ -197,7 +208,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ==================== USER ROUTES ====================
   
-  app.get("/api/users", requireAuth, async (req, res) => {
+  app.get("/api/users", requireRole("Admin"), async (req, res) => {
     try {
       const users = await storage.getAllUsers();
       return res.json({ users: users.map(sanitizeUser) });
@@ -218,21 +229,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/users/:id", requireRole("Admin"), async (req, res) => {
+    try {
+      const userId = Number(req.params.id);
+      
+      // Validate request body
+      const validation = updateUserSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ 
+          message: "Invalid update data", 
+          errors: validation.error.errors 
+        });
+      }
+
+      const { email, name, role, department, password } = validation.data;
+
+      const updates: Partial<{
+        email: string;
+        name: string;
+        role: string;
+        department: string | null;
+        passwordHash: string;
+      }> = {};
+
+      if (email !== undefined) updates.email = email;
+      if (name !== undefined) updates.name = name;
+      if (role !== undefined) updates.role = role;
+      if (department !== undefined) updates.department = department;
+      if (password !== undefined) {
+        const passwordHash = await bcrypt.hash(password, 10);
+        updates.passwordHash = passwordHash;
+      }
+
+      const updatedUser = await storage.updateUser(userId, updates);
+      return res.json({ user: sanitizeUser(updatedUser) });
+    } catch (error) {
+      console.error("Update user error:", error);
+      return res.status(500).json({ message: "Failed to update user" });
+    }
+  });
+
+  app.delete("/api/users/:id", requireRole("Admin"), async (req, res) => {
+    try {
+      const userId = Number(req.params.id);
+      await storage.deleteUser(userId);
+      return res.json({ message: "User deleted successfully" });
+    } catch (error) {
+      console.error("Delete user error:", error);
+      return res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
+
   // ==================== GAP ROUTES ====================
   
   app.get("/api/gaps", requireAuth, async (req, res) => {
     try {
-      const { status, reporterId, assignedToId } = req.query;
-      
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const { status } = req.query;
       let gaps;
-      if (status) {
-        gaps = await storage.getGapsByStatus(status as string);
-      } else if (reporterId) {
-        gaps = await storage.getGapsByReporter(Number(reporterId));
-      } else if (assignedToId) {
-        gaps = await storage.getGapsByAssignee(Number(assignedToId));
+
+      // RBAC: Filter gaps based on user role
+      if (user.role === "Admin" || user.role === "Management") {
+        // Admin & Management: See all gaps
+        if (status) {
+          gaps = await storage.getGapsByStatus(status as string);
+        } else {
+          gaps = await storage.getAllGaps();
+        }
+      } else if (user.role === "QA/Ops") {
+        // QA/Ops: Only see gaps they reported
+        gaps = await storage.getGapsByReporter(user.id);
+        if (status) {
+          gaps = gaps.filter(g => g.status === status);
+        }
+      } else if (user.role === "POC") {
+        // POC: Only see gaps assigned to them
+        gaps = await storage.getGapsByAssignee(user.id);
+        if (status) {
+          gaps = gaps.filter(g => g.status === status);
+        }
       } else {
-        gaps = await storage.getAllGaps();
+        gaps = [];
       }
 
       return res.json({ gaps });
@@ -247,6 +328,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gap = await storage.getGap(Number(req.params.id));
       if (!gap) {
         return res.status(404).json({ message: "Gap not found" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // RBAC: Check if user has permission to view this gap
+      if (user.role !== "Admin" && user.role !== "Management") {
+        if (user.role === "QA/Ops" && gap.reporterId !== user.id) {
+          return res.status(403).json({ message: "Access denied: You can only view gaps you reported" });
+        }
+        if (user.role === "POC" && gap.assignedToId !== user.id) {
+          return res.status(403).json({ message: "Access denied: You can only view gaps assigned to you" });
+        }
       }
 
       // Get reporter and assignee info (sanitized)
