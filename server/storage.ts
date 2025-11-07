@@ -32,6 +32,7 @@ export interface IStorage {
   updateGap(id: number, gap: Partial<Omit<Gap, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Gap | undefined>;
   deleteGap(id: number): Promise<boolean>;
   resolveGap(id: number, resolutionSummary: string, resolutionAttachments: any[]): Promise<Gap | undefined>;
+  getAllGapAttachments(gapId: number): Promise<any[]>;
   
   // Comment operations
   getComment(id: number): Promise<Comment | undefined>;
