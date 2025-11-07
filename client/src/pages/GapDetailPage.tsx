@@ -69,8 +69,8 @@ export default function GapDetailPage() {
   });
 
   const addCommentMutation = useMutation({
-    mutationFn: async (content: string) => {
-      return await apiRequest("POST", `/api/gaps/${gapId}/comments`, { content });
+    mutationFn: async ({ content, attachments }: { content: string; attachments: string[] }) => {
+      return await apiRequest("POST", `/api/gaps/${gapId}/comments`, { content, attachments });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [`/api/gaps/${gapId}/comments`] });
@@ -244,8 +244,8 @@ export default function GapDetailPage() {
             <TabsContent value="discussion" className="mt-4">
               <CommentThread 
                 comments={comments}
-                onAddComment={async (content) => {
-                  await addCommentMutation.mutateAsync(content);
+                onAddComment={async (content, attachments) => {
+                  await addCommentMutation.mutateAsync({ content, attachments });
                 }}
                 isSubmitting={addCommentMutation.isPending}
               />

@@ -1,10 +1,11 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import UserAvatar from "./UserAvatar";
 import { formatDistanceToNow } from "date-fns";
-import { Paperclip, Send, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { Paperclip, Send, Loader2, X } from "lucide-react";
+import { useState, useRef } from "react";
 
 interface Comment {
   id: string;
@@ -16,18 +17,36 @@ interface Comment {
 
 interface CommentThreadProps {
   comments: Comment[];
-  onAddComment?: (content: string) => Promise<void>;
+  onAddComment?: (content: string, attachments: string[]) => Promise<void>;
   isSubmitting?: boolean;
 }
 
 export default function CommentThread({ comments, onAddComment, isSubmitting }: CommentThreadProps) {
   const [newComment, setNewComment] = useState("");
+  const [attachments, setAttachments] = useState<string[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (files) {
+      const fileNames = Array.from(files).map(f => f.name);
+      setAttachments(prev => [...prev, ...fileNames]);
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmit = async () => {
-    if (newComment.trim() && onAddComment) {
+    if ((newComment.trim() || attachments.length > 0) && onAddComment) {
       try {
-        await onAddComment(newComment);
+        await onAddComment(newComment, attachments);
         setNewComment("");
+        setAttachments([]);
+        if (fileInputRef.current) {
+          fileInputRef.current.value = "";
+        }
       } catch (error) {
         // Error handling is done in parent component
         console.error("Comment submission error:", error);
@@ -74,12 +93,48 @@ export default function CommentThread({ comments, onAddComment, isSubmitting }: 
             rows={3}
             data-testid="input-comment"
           />
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {attachments.map((file, idx) => (
+                <div key={idx} className="text-xs bg-muted px-2 py-1 rounded flex items-center gap-2" data-testid={`attachment-chip-${idx}`}>
+                  <Paperclip className="h-3 w-3" />
+                  <span>{file}</span>
+                  <button
+                    onClick={() => removeAttachment(idx)}
+                    className="hover:bg-muted-foreground/20 rounded-full p-0.5"
+                    data-testid={`button-remove-attachment-${idx}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <Input
+            ref={fileInputRef}
+            type="file"
+            onChange={handleFileSelect}
+            multiple
+            className="hidden"
+            data-testid="input-file-hidden"
+          />
           <div className="flex justify-between items-center">
-            <Button variant="outline" size="sm" data-testid="button-attach-file" disabled={isSubmitting}>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isSubmitting}
+              data-testid="button-attach-file"
+            >
               <Paperclip className="h-4 w-4 mr-1" />
               Attach
             </Button>
-            <Button size="sm" onClick={handleSubmit} disabled={isSubmitting || !newComment.trim()} data-testid="button-submit-comment">
+            <Button 
+              size="sm" 
+              onClick={handleSubmit} 
+              disabled={isSubmitting || (!newComment.trim() && attachments.length === 0)} 
+              data-testid="button-submit-comment"
+            >
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-1 animate-spin" />

@@ -43,6 +43,8 @@ export const gaps = pgTable("gaps", {
   aiProcessed: boolean("ai_processed").default(false),
   attachments: jsonb("attachments").default([]),
   sopSuggestions: jsonb("sop_suggestions"),
+  resolutionSummary: text("resolution_summary"),
+  resolutionAttachments: jsonb("resolution_attachments").default([]),
 });
 
 export const insertGapSchema = createInsertSchema(gaps).omit({ 
