@@ -39,7 +39,20 @@ The system is built on a React 18 (TypeScript) frontend utilizing `shadcn/ui` fo
 - **Socket.io**: Enables real-time, bidirectional communication between web clients and the server.
 ## Recent Changes
 
-### November 7, 2025 (Latest - AI, Email, & Audit Enhancements)
+### November 8, 2025 (Latest - File Upload & Email Fixes)
+- **File Upload Integration**: Complete file upload support for dynamic form templates
+  - Created `useFileUpload` hook for async file uploads to `/api/files/upload`
+  - Updated DynamicFormRenderer to upload files immediately when selected
+  - Files are stored as metadata objects (originalName, filename, size, mimetype, path)
+  - Real-time upload progress indicator with file size display
+  - Automatic extraction and inclusion of attachments in gap submissions
+  - Fixed "View Original Gap" navigation to use role-based routes
+- **Email Configuration**: Updated SendGrid FROM_EMAIL to `contactus@solvextra.com`
+  - Enhanced logging for email sending debugging
+  - Comprehensive error handling and delivery tracking
+  - Duplicate marking email notifications include closer details
+
+### November 7, 2025 (AI, Email, & Audit Enhancements)
 - **OpenRouter AI Integration**: Upgraded gap similarity detection from TF-IDF to GPT-4 semantic search
   - Parallel processing of all similarity calculations for better performance
   - More accurate duplicate detection with AI reasoning
