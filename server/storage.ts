@@ -32,7 +32,7 @@ export interface IStorage {
   createGap(gap: InsertGap): Promise<Gap>;
   updateGap(id: number, gap: Partial<Omit<Gap, 'id' | 'createdAt' | 'updatedAt'>>): Promise<Gap | undefined>;
   deleteGap(id: number): Promise<boolean>;
-  resolveGap(id: number, resolutionSummary: string, resolutionAttachments: any[]): Promise<Gap | undefined>;
+  resolveGap(id: number, resolutionSummary: string, resolutionAttachments: any[], updatedById?: number): Promise<Gap | undefined>;
   getAllGapAttachments(gapId: number): Promise<any[]>;
   getFilteredGaps(filters: {
     dateFrom?: Date;
@@ -82,6 +82,7 @@ export interface IStorage {
   
   // Gap POC operations
   getGapPocs(gapId: number): Promise<Array<GapPoc & { user: PublicUser }>>;
+  getGapPocsWithDetails(gapId: number): Promise<Array<GapPoc & { user: PublicUser; addedBy: PublicUser }>>;
   addGapPoc(poc: InsertGapPoc): Promise<GapPoc>;
   removeGapPoc(gapId: number, userId: number): Promise<boolean>;
   isUserAssignedPoc(gapId: number, userId: number): Promise<boolean>;
@@ -198,7 +199,7 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount ? result.rowCount > 0 : false;
   }
 
-  async resolveGap(id: number, resolutionSummary: string, resolutionAttachments: string[]): Promise<Gap | undefined> {
+  async resolveGap(id: number, resolutionSummary: string, resolutionAttachments: string[], updatedById?: number): Promise<Gap | undefined> {
     const [resolvedGap] = await db
       .update(gaps)
       .set({ 
@@ -206,7 +207,8 @@ export class DatabaseStorage implements IStorage {
         resolutionSummary,
         resolutionAttachments: resolutionAttachments as any,
         resolvedAt: new Date(),
-        updatedAt: new Date()
+        updatedAt: new Date(),
+        updatedById: updatedById || null
       })
       .where(eq(gaps.id, id))
       .returning();
@@ -535,6 +537,45 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(gapPocs.isPrimary), gapPocs.addedAt);
     
     return pocs as Array<GapPoc & { user: PublicUser }>;
+  }
+
+  async getGapPocsWithDetails(gapId: number): Promise<Array<GapPoc & { user: PublicUser; addedBy: PublicUser }>> {
+    const pocRecords = await db
+      .select()
+      .from(gapPocs)
+      .where(eq(gapPocs.gapId, gapId))
+      .orderBy(desc(gapPocs.isPrimary), gapPocs.addedAt);
+    
+    const pocsWithDetails = await Promise.all(
+      pocRecords.map(async (poc) => {
+        const pocUser = await this.getUser(poc.userId);
+        const addedByUser = await this.getUser(poc.addedById);
+        
+        return {
+          ...poc,
+          user: pocUser ? {
+            id: pocUser.id,
+            email: pocUser.email,
+            employeeId: pocUser.employeeId,
+            name: pocUser.name,
+            role: pocUser.role,
+            department: pocUser.department,
+            createdAt: pocUser.createdAt,
+          } as PublicUser : {} as PublicUser,
+          addedBy: addedByUser ? {
+            id: addedByUser.id,
+            email: addedByUser.email,
+            employeeId: addedByUser.employeeId,
+            name: addedByUser.name,
+            role: addedByUser.role,
+            department: addedByUser.department,
+            createdAt: addedByUser.createdAt,
+          } as PublicUser : {} as PublicUser,
+        };
+      })
+    );
+    
+    return pocsWithDetails;
   }
 
   async addGapPoc(poc: InsertGapPoc): Promise<GapPoc> {

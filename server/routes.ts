@@ -478,6 +478,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get POC users - accessible to Admin, Management, and POC roles
+  app.get("/api/pocs", requireRole("Admin", "Management", "POC"), async (req, res) => {
+    try {
+      const pocUsers = await storage.getUsersByRole("POC");
+      return res.json({ users: pocUsers.map(sanitizeUser) });
+    } catch (error) {
+      console.error("Get POC users error:", error);
+      return res.status(500).json({ message: "Failed to get POC users" });
+    }
+  });
+
   app.get("/api/users/role/:role", requireAuth, async (req, res) => {
     try {
       const { role } = req.params;
@@ -841,9 +852,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const hasContentChange = req.body.title || req.body.description;
       
       // If status is changing to InProgress, set inProgressAt timestamp
-      const updateData = { ...req.body };
+      const updateData = { ...req.body, updatedById: req.session.userId };
       if (req.body.status === "InProgress") {
         updateData.inProgressAt = new Date();
+      }
+      if (req.body.status === "Closed" && !updateData.closedById) {
+        updateData.closedAt = new Date();
+        updateData.closedById = req.session.userId;
       }
       
       const gap = await storage.updateGap(Number(req.params.id), updateData);
@@ -888,7 +903,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/gaps/:id/assign", requireRole("Management", "Admin"), async (req, res) => {
     try {
-      const { assignedToId, tatDeadline, notes } = req.body;
+      const { assignedToId, tatDeadline, notes, priority } = req.body;
 
       if (!assignedToId) {
         return res.status(400).json({ message: "Assignee is required" });
@@ -900,12 +915,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Gap not found" });
       }
 
-      const gap = await storage.updateGap(Number(req.params.id), {
+      const updateData: any = {
         assignedToId,
         tatDeadline: tatDeadline ? new Date(tatDeadline) : null,
         status: "Assigned",
         assignedAt: new Date(),
-      });
+      };
+      
+      // Include priority if provided
+      if (priority) {
+        updateData.priority = priority;
+      }
+
+      const gap = await storage.updateGap(Number(req.params.id), updateData);
 
       if (!gap) {
         return res.status(404).json({ message: "Gap not found" });
@@ -968,6 +990,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         duplicateOfId: originalGapId,
         status: "Closed",
         closedAt: new Date(),
+        closedById: req.session.userId!,
       });
 
       if (!gap) {
@@ -1232,6 +1255,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gap = await storage.updateGap(Number(req.params.id), {
         status: "Reopened",
         reopenedAt: new Date(),
+        reopenedById: req.session.userId!,
       });
 
       if (!gap) {
@@ -1368,7 +1392,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const gap = await storage.resolveGap(
         Number(req.params.id),
         resolutionSummary,
-        resolutionAttachments || []
+        resolutionAttachments || [],
+        req.session.userId
       );
 
       if (!gap) {
@@ -1897,12 +1922,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const reporter = gap.reporterId ? await storage.getUser(gap.reporterId) : undefined;
           const assignee = gap.assignedToId ? await storage.getUser(gap.assignedToId) : undefined;
           const template = gap.formTemplateId ? await storage.getFormTemplate(gap.formTemplateId) : undefined;
+          const closedBy = gap.closedById ? await storage.getUser(gap.closedById) : undefined;
+          const updatedBy = gap.updatedById ? await storage.getUser(gap.updatedById) : undefined;
+          const reopenedBy = gap.reopenedById ? await storage.getUser(gap.reopenedById) : undefined;
+          const pocs = await storage.getGapPocsWithDetails(gap.id);
 
           return {
             ...gap,
             reporter,
             assignee,
             template,
+            closedBy,
+            updatedBy,
+            reopenedBy,
+            pocs: pocs.map(p => ({
+              user: p.user,
+              addedBy: p.addedBy,
+              addedAt: p.addedAt,
+              isPrimary: p.isPrimary
+            }))
           };
         })
       );
@@ -1965,12 +2003,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const reporter = gap.reporterId ? await storage.getUser(gap.reporterId) : undefined;
           const assignee = gap.assignedToId ? await storage.getUser(gap.assignedToId) : undefined;
           const template = gap.formTemplateId ? await storage.getFormTemplate(gap.formTemplateId) : undefined;
+          const closedBy = gap.closedById ? await storage.getUser(gap.closedById) : undefined;
+          const updatedBy = gap.updatedById ? await storage.getUser(gap.updatedById) : undefined;
+          const reopenedBy = gap.reopenedById ? await storage.getUser(gap.reopenedById) : undefined;
+          const pocs = await storage.getGapPocsWithDetails(gap.id);
 
           return {
             ...gap,
             reporter,
             assignee,
             template,
+            closedBy,
+            updatedBy,
+            reopenedBy,
+            pocs: pocs.map(p => ({
+              user: p.user,
+              addedBy: p.addedBy,
+              addedAt: p.addedAt,
+              isPrimary: p.isPrimary
+            }))
           };
         })
       );

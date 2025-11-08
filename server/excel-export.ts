@@ -5,6 +5,15 @@ export interface GapWithRelations extends Gap {
   reporter?: User;
   assignee?: User;
   template?: FormTemplate;
+  closedBy?: User;
+  updatedBy?: User;
+  reopenedBy?: User;
+  pocs?: Array<{
+    user: User;
+    addedBy: User;
+    addedAt: Date;
+    isPrimary: boolean;
+  }>;
 }
 
 export function generateExcelReport(
@@ -30,33 +39,45 @@ export function generateExcelReport(
 }
 
 function buildStandardWorksheet(gaps: GapWithRelations[]) {
-  const rows = gaps.map((gap) => ({
-    "Gap ID": gap.gapId,
-    Title: gap.title,
-    Description: gap.description,
-    Status: gap.status,
-    Priority: gap.priority,
-    Severity: gap.severity || "N/A",
-    Department: gap.department || "N/A",
-    Reporter: gap.reporter?.name || "Unknown",
-    "Reporter Email": gap.reporter?.email || "Unknown",
-    Assignee: gap.assignee?.name || "Unassigned",
-    "Assignee Email": gap.assignee?.email || "N/A",
-    Template: gap.template?.name || "N/A",
-    "Created At": gap.createdAt ? new Date(gap.createdAt).toLocaleString() : "",
-    "Updated At": gap.updatedAt ? new Date(gap.updatedAt).toLocaleString() : "",
-    "Resolved At": gap.resolvedAt
-      ? new Date(gap.resolvedAt).toLocaleString()
-      : "N/A",
-    "Closed At": gap.closedAt ? new Date(gap.closedAt).toLocaleString() : "N/A",
-    "TAT Deadline": gap.tatDeadline
-      ? new Date(gap.tatDeadline).toLocaleString()
-      : "N/A",
-    "Resolution Summary": gap.resolutionSummary || "N/A",
-    "Attachments Count": Array.isArray(gap.attachments)
-      ? gap.attachments.length
-      : 0,
-  }));
+  const rows = gaps.map((gap) => {
+    // Build POC assignments string
+    const pocsList = gap.pocs && gap.pocs.length > 0
+      ? gap.pocs.map(p => `${p.user.name} (added by ${p.addedBy.name} on ${new Date(p.addedAt).toLocaleDateString()})`).join("; ")
+      : "N/A";
+
+    return {
+      "Gap ID": gap.gapId,
+      Title: gap.title,
+      Description: gap.description,
+      Status: gap.status,
+      Priority: gap.priority,
+      Severity: gap.severity || "N/A",
+      Department: gap.department || "N/A",
+      Reporter: gap.reporter?.name || "Unknown",
+      "Reporter Email": gap.reporter?.email || "Unknown",
+      Assignee: gap.assignee?.name || "Unassigned",
+      "Assignee Email": gap.assignee?.email || "N/A",
+      "POC Assignments": pocsList,
+      Template: gap.template?.name || "N/A",
+      "Created At": gap.createdAt ? new Date(gap.createdAt).toLocaleString() : "",
+      "Updated At": gap.updatedAt ? new Date(gap.updatedAt).toLocaleString() : "",
+      "Updated By": gap.updatedBy?.name || "N/A",
+      "Resolved At": gap.resolvedAt
+        ? new Date(gap.resolvedAt).toLocaleString()
+        : "N/A",
+      "Closed At": gap.closedAt ? new Date(gap.closedAt).toLocaleString() : "N/A",
+      "Closed By": gap.closedBy?.name || "N/A",
+      "Reopened At": gap.reopenedAt ? new Date(gap.reopenedAt).toLocaleString() : "N/A",
+      "Reopened By": gap.reopenedBy?.name || "N/A",
+      "TAT Deadline": gap.tatDeadline
+        ? new Date(gap.tatDeadline).toLocaleString()
+        : "N/A",
+      "Resolution Summary": gap.resolutionSummary || "N/A",
+      "Attachments Count": Array.isArray(gap.attachments)
+        ? gap.attachments.length
+        : 0,
+    };
+  });
 
   return XLSX.utils.json_to_sheet(rows);
 }
@@ -83,6 +104,11 @@ function buildTemplateWorksheet(
 
   // Build rows
   const rows = gaps.map((gap) => {
+    // Build POC assignments string
+    const pocsList = gap.pocs && gap.pocs.length > 0
+      ? gap.pocs.map(p => `${p.user.name} (added by ${p.addedBy.name})`).join("; ")
+      : "N/A";
+
     const row: any = {
       "Gap ID": gap.gapId,
       Title: gap.title,
@@ -91,13 +117,18 @@ function buildTemplateWorksheet(
       Reporter: gap.reporter?.name || "Unknown",
       "Reporter Email": gap.reporter?.email || "Unknown",
       Assignee: gap.assignee?.name || "Unassigned",
+      "POC Assignments": pocsList,
       Department: gap.department || "N/A",
       "Created At": gap.createdAt
         ? new Date(gap.createdAt).toLocaleString()
         : "",
+      "Updated By": gap.updatedBy?.name || "N/A",
       "Resolved At": gap.resolvedAt
         ? new Date(gap.resolvedAt).toLocaleString()
         : "N/A",
+      "Closed By": gap.closedBy?.name || "N/A",
+      "Reopened By": gap.reopenedBy?.name || "N/A",
+      "Resolution Summary": gap.resolutionSummary || "N/A",
     };
 
     // Add form responses

@@ -78,6 +78,9 @@ export default function GapDetailPage() {
   const resolutionFileInputRef = useRef<HTMLInputElement | null>(null);
   const [isAddPocDialogOpen, setIsAddPocDialogOpen] = useState(false);
   const [selectedPocId, setSelectedPocId] = useState<string>("");
+  const [isExtensionDialogOpen, setIsExtensionDialogOpen] = useState(false);
+  const [extensionReason, setExtensionReason] = useState("");
+  const [extensionDeadline, setExtensionDeadline] = useState("");
 
   const { data: userData } = useQuery<{ user: any }>({
     queryKey: ["/api/auth/me"],
@@ -222,9 +225,37 @@ export default function GapDetailPage() {
     },
   });
 
+  const requestExtensionMutation = useMutation({
+    mutationFn: async () => {
+      if (!extensionReason.trim() || !extensionDeadline) {
+        throw new Error("Please provide both reason and requested deadline");
+      }
+      return await apiRequest("POST", `/api/gaps/${gapId}/tat-extensions`, {
+        reason: extensionReason,
+        requestedDeadline: extensionDeadline,
+      });
+    },
+    onSuccess: () => {
+      setIsExtensionDialogOpen(false);
+      setExtensionReason("");
+      setExtensionDeadline("");
+      toast({
+        title: "Success",
+        description: "TAT extension request has been submitted to Management for review.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to submit extension request.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Query all POC users for the add POC dialog
   const { data: pocUsersData } = useQuery<{ users: any[] }>({
-    queryKey: ["/api/users", { role: "POC" }],
+    queryKey: ["/api/pocs"],
   });
 
   const addPocMutation = useMutation({
@@ -872,7 +903,7 @@ export default function GapDetailPage() {
             )}
             
             {userData?.user && gap?.assignedToId === userData.user.id && (
-              <Dialog>
+              <Dialog open={isExtensionDialogOpen} onOpenChange={setIsExtensionDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="w-full" data-testid="button-request-extension">
                   <Clock className="h-4 w-4 mr-2" />
@@ -886,14 +917,37 @@ export default function GapDetailPage() {
                 <div className="space-y-4">
                   <div>
                     <Label>Reason</Label>
-                    <Textarea placeholder="Explain why you need more time..." rows={3} data-testid="input-extension-reason" />
+                    <Textarea 
+                      placeholder="Explain why you need more time..." 
+                      rows={3} 
+                      value={extensionReason}
+                      onChange={(e) => setExtensionReason(e.target.value)}
+                      data-testid="input-extension-reason" 
+                    />
                   </div>
                   <div>
                     <Label>Requested Deadline</Label>
-                    <Input type="date" data-testid="input-extension-date" />
+                    <Input 
+                      type="date" 
+                      value={extensionDeadline}
+                      onChange={(e) => setExtensionDeadline(e.target.value)}
+                      data-testid="input-extension-date" 
+                    />
                   </div>
-                  <Button className="w-full" data-testid="button-submit-extension">
-                    Submit Request
+                  <Button 
+                    className="w-full" 
+                    onClick={() => requestExtensionMutation.mutate()}
+                    disabled={!extensionReason.trim() || !extensionDeadline || requestExtensionMutation.isPending}
+                    data-testid="button-submit-extension"
+                  >
+                    {requestExtensionMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      "Submit Request"
+                    )}
                   </Button>
                 </div>
               </DialogContent>

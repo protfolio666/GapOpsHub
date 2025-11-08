@@ -51,9 +51,15 @@ export default function ReportsPage() {
   const [filters, setFilters] = useState<ReportFilters>({});
   const [selectedTemplateForExport, setSelectedTemplateForExport] = useState<number | undefined>();
 
-  // Fetch all users for filter dropdowns
+  // Fetch current user
+  const { data: userData } = useQuery<{ user: User }>({
+    queryKey: ["/api/auth/me"],
+  });
+
+  // Fetch all users for filter dropdowns (Admin only)
   const { data: usersData } = useQuery<{ users: User[] }>({
     queryKey: ["/api/users"],
+    enabled: userData?.user?.role === "Admin",
   });
   
   const allUsers = usersData?.users || [];
@@ -64,6 +70,9 @@ export default function ReportsPage() {
   });
   
   const templates = templatesData?.templates || [];
+
+  // Auto-enable reports for POC and QA users (they should see their own reports immediately)
+  const autoFetch = userData?.user && (userData.user.role === "POC" || userData.user.role === "QA/Ops");
 
   // Fetch filtered gaps
   const { data: reportData, isLoading, refetch } = useQuery<{ gaps: GapWithRelations[]; total: number }>({
@@ -91,7 +100,7 @@ export default function ReportsPage() {
 
       return response.json();
     },
-    enabled: false, // Only fetch when user clicks "Apply Filters"
+    enabled: autoFetch || false, // Auto-fetch for POC/QA, manual for Admin/Management
   });
 
   const gaps = reportData?.gaps || [];
