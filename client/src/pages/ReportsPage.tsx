@@ -212,14 +212,14 @@ export default function ReportsPage() {
             <div className="space-y-2">
               <Label htmlFor="template">Template</Label>
               <Select
-                value={filters.templateIds?.[0]?.toString() || ''}
-                onValueChange={(value) => setFilters({ ...filters, templateIds: value ? [Number(value)] : [] })}
+                value={filters.templateIds?.[0]?.toString() || 'all'}
+                onValueChange={(value) => setFilters({ ...filters, templateIds: value !== 'all' ? [Number(value)] : [] })}
               >
                 <SelectTrigger id="template" data-testid="select-template">
                   <SelectValue placeholder="All Templates" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Templates</SelectItem>
+                  <SelectItem value="all">All Templates</SelectItem>
                   {templates?.map((t) => (
                     <SelectItem key={t.id} value={t.id.toString()}>
                       {t.name}
@@ -233,14 +233,14 @@ export default function ReportsPage() {
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
               <Select
-                value={filters.statuses?.[0] || ''}
-                onValueChange={(value) => setFilters({ ...filters, statuses: value ? [value] : [] })}
+                value={filters.statuses?.[0] || 'all'}
+                onValueChange={(value) => setFilters({ ...filters, statuses: value !== 'all' ? [value] : [] })}
               >
                 <SelectTrigger id="status" data-testid="select-status">
                   <SelectValue placeholder="All Statuses" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Statuses</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="PendingAI">Pending AI</SelectItem>
                   <SelectItem value="NeedsReview">Needs Review</SelectItem>
                   <SelectItem value="Assigned">Assigned</SelectItem>
@@ -267,14 +267,14 @@ export default function ReportsPage() {
             <div className="space-y-2">
               <Label htmlFor="role">Role</Label>
               <Select
-                value={filters.roles?.[0] || ''}
-                onValueChange={(value) => setFilters({ ...filters, roles: value ? [value] : [] })}
+                value={filters.roles?.[0] || 'all'}
+                onValueChange={(value) => setFilters({ ...filters, roles: value !== 'all' ? [value] : [] })}
               >
                 <SelectTrigger id="role" data-testid="select-role">
                   <SelectValue placeholder="All Roles" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Roles</SelectItem>
+                  <SelectItem value="all">All Roles</SelectItem>
                   <SelectItem value="Admin">Admin</SelectItem>
                   <SelectItem value="Management">Management</SelectItem>
                   <SelectItem value="POC">POC</SelectItem>
@@ -334,14 +334,14 @@ export default function ReportsPage() {
               </div>
               <div className="flex gap-2 items-center">
                 <Select
-                  value={selectedTemplateForExport?.toString() || ''}
-                  onValueChange={(value) => setSelectedTemplateForExport(value ? Number(value) : undefined)}
+                  value={selectedTemplateForExport?.toString() || 'standard'}
+                  onValueChange={(value) => setSelectedTemplateForExport(value !== 'standard' ? Number(value) : undefined)}
                 >
                   <SelectTrigger className="w-[200px]" data-testid="select-export-template">
                     <SelectValue placeholder="Export Format" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Standard Export</SelectItem>
+                    <SelectItem value="standard">Standard Export</SelectItem>
                     {templates?.map((t) => (
                       <SelectItem key={t.id} value={t.id.toString()}>
                         {t.name} Format
