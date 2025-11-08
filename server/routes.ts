@@ -588,8 +588,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gaps = gaps.filter(g => g.status === status);
         }
       } else if (user.role === "POC") {
-        // POC: Only see gaps assigned to them
-        gaps = await storage.getGapsByAssignee(user.id);
+        // POC: See gaps where they are primary assignee or in the POC list
+        gaps = await storage.getGapsByPoc(user.id);
         if (status) {
           gaps = gaps.filter(g => g.status === status);
         }

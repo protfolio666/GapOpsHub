@@ -178,6 +178,35 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(gaps).where(eq(gaps.assignedToId, assignedToId)).orderBy(desc(gaps.createdAt));
   }
 
+  async getGapsByPoc(pocId: number): Promise<Gap[]> {
+    // Get gaps where POC is primary assignee
+    const primaryGaps = await db
+      .select()
+      .from(gaps)
+      .where(eq(gaps.assignedToId, pocId))
+      .orderBy(desc(gaps.createdAt));
+    
+    // Get gaps where POC is in the POC list
+    const pocListGaps = await db
+      .select({ gap: gaps })
+      .from(gapPocs)
+      .innerJoin(gaps, eq(gapPocs.gapId, gaps.id))
+      .where(eq(gapPocs.userId, pocId))
+      .orderBy(desc(gaps.createdAt));
+    
+    // Combine and deduplicate
+    const allGaps = [...primaryGaps];
+    const primaryGapIds = new Set(primaryGaps.map(g => g.id));
+    
+    pocListGaps.forEach(({ gap }) => {
+      if (!primaryGapIds.has(gap.id)) {
+        allGaps.push(gap);
+      }
+    });
+    
+    return allGaps;
+  }
+
   async createGap(gap: InsertGap): Promise<Gap> {
     // Generate gap ID
     const count = await db.select({ count: sql<number>`count(*)` }).from(gaps);

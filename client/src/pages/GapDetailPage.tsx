@@ -663,7 +663,7 @@ export default function GapDetailPage() {
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <p className="text-xs font-medium text-muted-foreground uppercase">Assigned POCs</p>
-                      {userData?.user && (["Admin", "Management"].includes(userData.user.role) || gapData.pocs.some(p => p.userId === userData.user.id)) && (
+                      {userData?.user && (["Admin", "Management"].includes(userData.user.role) || gapData.pocs.some(p => p.userId === userData.user.id && p.isPrimary)) && (
                         <Dialog open={isAddPocDialogOpen} onOpenChange={setIsAddPocDialogOpen}>
                           <DialogTrigger asChild>
                             <Button variant="ghost" size="sm" data-testid="button-add-poc">
@@ -718,7 +718,7 @@ export default function GapDetailPage() {
                           <UserAvatar name={poc.user.name} size="sm" />
                           <span className="text-sm flex-1">{poc.user.name}</span>
                           {poc.isPrimary && <Badge variant="secondary" className="text-xs">Primary</Badge>}
-                          {userData?.user && (["Admin", "Management"].includes(userData.user.role) || poc.userId === userData.user.id) && !poc.isPrimary && (
+                          {userData?.user && (["Admin", "Management"].includes(userData.user.role) || gapData.pocs.some(p => p.userId === userData.user.id && p.isPrimary)) && !poc.isPrimary && (
                             <Button
                               variant="ghost"
                               size="sm"
