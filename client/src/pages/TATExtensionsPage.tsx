@@ -133,8 +133,8 @@ export default function TATExtensionsPage() {
                     </TableCell>
                     <TableCell data-testid={`cell-requester-${ext.id}`}>
                       <div>
-                        <div className="font-medium">{ext.requester.name}</div>
-                        <div className="text-sm text-muted-foreground">{ext.requester.email}</div>
+                        <div className="font-medium">{ext.requestedBy.name}</div>
+                        <div className="text-sm text-muted-foreground">{ext.requestedBy.email}</div>
                       </div>
                     </TableCell>
                     <TableCell data-testid={`cell-reason-${ext.id}`}>

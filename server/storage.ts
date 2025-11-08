@@ -722,10 +722,12 @@ export class DatabaseStorage implements IStorage {
           ...primaryGaps.map(g => g.id),
           ...pocListGaps.map(g => g.gap.id)
         ]);
-        const allGaps = await db
-          .select()
-          .from(gaps)
-          .where(sql`${gaps.id} = ANY(${Array.from(allGapIds)})`);
+        const allGaps = allGapIds.size > 0
+          ? await db
+              .select()
+              .from(gaps)
+              .where(inArray(gaps.id, Array.from(allGapIds)))
+          : [];
         
         const totalAssigned = allGaps.length;
         
