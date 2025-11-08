@@ -39,7 +39,24 @@ The system is built on a React 18 (TypeScript) frontend utilizing `shadcn/ui` fo
 - **Socket.io**: Enables real-time, bidirectional communication between web clients and the server.
 ## Recent Changes
 
-### November 8, 2025 (Latest - Branding Update & Secondary POC Permissions)
+### November 8, 2025 (Latest - Resolution History & Login Page Redesign)
+- **Resolution History Tracking**: Complete backend implementation for tracking all resolutions when gaps are reopened
+  - Added `resolutionHistory` table with composite index for fast queries
+  - Storage methods: `createResolutionHistory()` and `getResolutionHistory()`
+  - Updated reopen gap logic to save current resolution to history before clearing
+  - New API endpoint: GET `/api/gaps/:id/resolution-history` with resolver details
+  - Automatic audit logging when gaps are reopened
+- **Login Page Redesign**: Modern two-column layout matching reference design
+  - Left side: Clean, simple login form with SolvExtra GO branding
+  - Right side: Beautiful puzzle piece illustration showing team collaboration
+  - Demo credentials clearly displayed
+  - Responsive design with smooth transitions
+- **Status**: Backend implementation complete, application running. Still need to:
+  - Fix TypeScript LSP errors for type safety
+  - Add UI components to display resolution history in GapDetailPage
+  - Update export reports to include all resolutions from history
+
+### November 8, 2025 (Earlier - Branding Update & Secondary POC Permissions)
 - **Secondary POC Full Permissions**: Enabled all gap resolution actions for secondary POCs
   - Added `isAnyPocOnGap` helper function to check both primary and secondary POC status
   - Secondary POCs can now mark gaps as In Progress
