@@ -1,0 +1,139 @@
+2025-11-08T17:36:43.000000000Z [inf]  Starting Container
+2025-11-08T17:36:43.723714011Z [inf]  
+2025-11-08T17:36:43.723721430Z [inf]  > rest-express@1.0.0 start
+2025-11-08T17:36:43.723727707Z [inf]  > NODE_ENV=production node dist/index.js
+2025-11-08T17:36:43.723754490Z [err]  npm warn config production Use `--omit=dev` instead.
+2025-11-08T17:36:43.723771450Z [inf]  
+2025-11-08T17:36:44.733831867Z [inf]  5:36:44 PM [express] serving on port 8080
+2025-11-08T17:36:53.186851812Z [inf]  5:36:53 PM [express] GET /api/auth/me 401 in 2ms :: {"message":"Authentication required"}
+2025-11-08T17:36:57.783649191Z [err]  [AUTH] Authentication error for abhishek@solvextra.com: error: password authentication failed for user 'neondb_owner'
+2025-11-08T17:36:57.783662901Z [err]      at file:///app/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-11-08T17:36:57.783671490Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-11-08T17:36:57.783679540Z [err]      at async NeonPreparedQuery.execute (file:///app/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-11-08T17:36:57.783686220Z [err]      at async DatabaseStorage.getUserByEmail (file:///app/dist/index.js:296:20)
+2025-11-08T17:36:57.783693968Z [err]      at async authenticateUser (file:///app/dist/index.js:811:18)
+2025-11-08T17:36:57.783702259Z [err]      at async file:///app/dist/index.js:1634:20 {
+2025-11-08T17:36:57.783709323Z [err]    length: 75,
+2025-11-08T17:36:57.783715630Z [err]    severity: 'ERROR',
+2025-11-08T17:36:57.783723287Z [err]    code: 'XX000',
+2025-11-08T17:36:57.783731196Z [err]    detail: undefined,
+2025-11-08T17:36:57.783738993Z [err]    hint: undefined,
+2025-11-08T17:36:57.783745807Z [err]    position: undefined,
+2025-11-08T17:36:57.783752223Z [err]    internalPosition: undefined,
+2025-11-08T17:36:57.783758928Z [err]    internalQuery: undefined,
+2025-11-08T17:36:57.783765182Z [err]    where: undefined,
+2025-11-08T17:36:57.783771966Z [err]    schema: undefined,
+2025-11-08T17:36:57.783780186Z [err]    table: undefined,
+2025-11-08T17:36:57.783789393Z [err]    column: undefined,
+2025-11-08T17:36:57.783797757Z [err]    dataType: undefined,
+2025-11-08T17:36:57.783805326Z [err]    constraint: undefined,
+2025-11-08T17:36:57.783814188Z [err]    file: undefined,
+2025-11-08T17:36:57.783820648Z [err]    line: undefined,
+2025-11-08T17:36:57.783826419Z [err]    routine: undefined
+2025-11-08T17:36:57.783831794Z [err]  }
+2025-11-08T17:36:57.787122553Z [inf]  5:36:57 PM [express] POST /api/auth/login 401 in 1521ms :: {"message":"Invalid email or password"}
+2025-11-08T17:36:59.725954757Z [err]  [AUTH] Authentication error for abhishek@solvextra.com: error: password authentication failed for user 'neondb_owner'
+2025-11-08T17:36:59.725961195Z [err]      at file:///app/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-11-08T17:36:59.726310286Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-11-08T17:36:59.726320779Z [err]      at async NeonPreparedQuery.execute (file:///app/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-11-08T17:36:59.726329239Z [err]      at async DatabaseStorage.getUserByEmail (file:///app/dist/index.js:296:20)
+2025-11-08T17:36:59.726336298Z [err]      at async authenticateUser (file:///app/dist/index.js:811:18)
+2025-11-08T17:36:59.726343095Z [err]      at async file:///app/dist/index.js:1634:20 {
+2025-11-08T17:36:59.726350587Z [err]    length: 75,
+2025-11-08T17:36:59.726356429Z [err]    severity: 'ERROR',
+2025-11-08T17:36:59.726363037Z [err]    code: 'XX000',
+2025-11-08T17:36:59.726369175Z [err]    detail: undefined,
+2025-11-08T17:36:59.726375798Z [err]    hint: undefined,
+2025-11-08T17:36:59.726381794Z [err]    position: undefined,
+2025-11-08T17:36:59.726399878Z [err]    internalPosition: undefined,
+2025-11-08T17:36:59.726405836Z [err]    internalQuery: undefined,
+2025-11-08T17:36:59.726411006Z [err]    where: undefined,
+2025-11-08T17:36:59.726417580Z [err]    schema: undefined,
+2025-11-08T17:36:59.726423416Z [err]    table: undefined,
+2025-11-08T17:36:59.726431469Z [err]    column: undefined,
+2025-11-08T17:36:59.726442288Z [err]    dataType: undefined,
+2025-11-08T17:36:59.726449299Z [err]    constraint: undefined,
+2025-11-08T17:36:59.726455172Z [err]    file: undefined,
+2025-11-08T17:36:59.726460218Z [err]    line: undefined,
+2025-11-08T17:36:59.726465496Z [err]    routine: undefined
+2025-11-08T17:36:59.726470451Z [err]  }
+2025-11-08T17:36:59.726476820Z [inf]  5:36:59 PM [express] POST /api/auth/login 401 in 1054ms :: {"message":"Invalid email or password"}
+2025-11-08T17:37:01.743786090Z [err]  }
+2025-11-08T17:37:01.743799120Z [inf]  5:37:01 PM [express] POST /api/auth/login 401 in 1262ms :: {"message":"Invalid email or password"}
+2025-11-08T17:37:01.744373372Z [err]  [AUTH] Authentication error for abhishek@solvextra.com: error: password authentication failed for user 'neondb_owner'
+2025-11-08T17:37:01.744378271Z [err]      at file:///app/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-11-08T17:37:01.744386063Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-11-08T17:37:01.744390607Z [err]      at async NeonPreparedQuery.execute (file:///app/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-11-08T17:37:01.744395464Z [err]      at async DatabaseStorage.getUserByEmail (file:///app/dist/index.js:296:20)
+2025-11-08T17:37:01.744400809Z [err]      at async authenticateUser (file:///app/dist/index.js:811:18)
+2025-11-08T17:37:01.744408251Z [err]      at async file:///app/dist/index.js:1634:20 {
+2025-11-08T17:37:01.744416837Z [err]    length: 75,
+2025-11-08T17:37:01.744422037Z [err]    severity: 'ERROR',
+2025-11-08T17:37:01.744426086Z [err]    code: 'XX000',
+2025-11-08T17:37:01.744431135Z [err]    detail: undefined,
+2025-11-08T17:37:01.744437148Z [err]    hint: undefined,
+2025-11-08T17:37:01.744441309Z [err]    position: undefined,
+2025-11-08T17:37:01.744446418Z [err]    internalPosition: undefined,
+2025-11-08T17:37:01.744451616Z [err]    internalQuery: undefined,
+2025-11-08T17:37:01.744463587Z [err]    where: undefined,
+2025-11-08T17:37:01.744467429Z [err]    schema: undefined,
+2025-11-08T17:37:01.744471579Z [err]    table: undefined,
+2025-11-08T17:37:01.744477109Z [err]    column: undefined,
+2025-11-08T17:37:01.744481536Z [err]    dataType: undefined,
+2025-11-08T17:37:01.744488239Z [err]    constraint: undefined,
+2025-11-08T17:37:01.744493442Z [err]    file: undefined,
+2025-11-08T17:37:01.744501924Z [err]    line: undefined,
+2025-11-08T17:37:01.744508820Z [err]    routine: undefined
+2025-11-08T17:37:11.097160709Z [inf]  5:37:11 PM [express] GET /api/auth/me 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:37:15.014426559Z [err]  [AUTH] Authentication error for abhishek@solvextra.com: error: password authentication failed for user 'neondb_owner'
+2025-11-08T17:37:15.014444950Z [err]      at file:///app/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-11-08T17:37:15.014455229Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-11-08T17:37:15.014464153Z [err]      at async NeonPreparedQuery.execute (file:///app/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-11-08T17:37:15.014474678Z [err]      at async DatabaseStorage.getUserByEmail (file:///app/dist/index.js:296:20)
+2025-11-08T17:37:15.014484420Z [err]      at async authenticateUser (file:///app/dist/index.js:811:18)
+2025-11-08T17:37:15.014493076Z [err]      at async file:///app/dist/index.js:1634:20 {
+2025-11-08T17:37:15.014501400Z [err]    length: 75,
+2025-11-08T17:37:15.014510202Z [err]    severity: 'ERROR',
+2025-11-08T17:37:15.014519946Z [err]    code: 'XX000',
+2025-11-08T17:37:15.014529189Z [err]    detail: undefined,
+2025-11-08T17:37:15.014537475Z [err]    hint: undefined,
+2025-11-08T17:37:15.014548487Z [err]    position: undefined,
+2025-11-08T17:37:15.014557351Z [err]    internalPosition: undefined,
+2025-11-08T17:37:15.014579002Z [err]    internalQuery: undefined,
+2025-11-08T17:37:15.014589173Z [err]    where: undefined,
+2025-11-08T17:37:15.014605681Z [err]    schema: undefined,
+2025-11-08T17:37:15.014615054Z [err]    table: undefined,
+2025-11-08T17:37:15.014624591Z [err]    column: undefined,
+2025-11-08T17:37:15.014633528Z [err]    dataType: undefined,
+2025-11-08T17:37:15.014642653Z [err]    constraint: undefined,
+2025-11-08T17:37:15.014651536Z [err]    file: undefined,
+2025-11-08T17:37:15.014664431Z [err]    line: undefined,
+2025-11-08T17:37:15.014676752Z [err]    routine: undefined
+2025-11-08T17:37:15.014683880Z [err]  }
+2025-11-08T17:37:15.014689237Z [inf]  5:37:15 PM [express] POST /api/auth/login 401 in 1233ms :: {"message":"Invalid email or password"}
+2025-11-08T17:37:20.922718708Z [err]  [AUTH] Authentication error for abhishek@solvextra.com: error: password authentication failed for user 'neondb_owner'
+2025-11-08T17:37:20.922725776Z [err]      at file:///app/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-11-08T17:37:20.922732986Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-11-08T17:37:20.922738161Z [err]      at async NeonPreparedQuery.execute (file:///app/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-11-08T17:37:20.922744961Z [err]      at async DatabaseStorage.getUserByEmail (file:///app/dist/index.js:296:20)
+2025-11-08T17:37:20.922753627Z [err]      at async authenticateUser (file:///app/dist/index.js:811:18)
+2025-11-08T17:37:20.922760406Z [err]      at async file:///app/dist/index.js:1634:20 {
+2025-11-08T17:37:20.922767080Z [err]    length: 75,
+2025-11-08T17:37:20.922773489Z [err]    severity: 'ERROR',
+2025-11-08T17:37:20.922781097Z [err]    code: 'XX000',
+2025-11-08T17:37:20.922787568Z [err]    detail: undefined,
+2025-11-08T17:37:20.922797802Z [err]    hint: undefined,
+2025-11-08T17:37:20.922812485Z [err]    position: undefined,
+2025-11-08T17:37:20.922820985Z [err]    internalPosition: undefined,
+2025-11-08T17:37:20.922829345Z [err]    internalQuery: undefined,
+2025-11-08T17:37:20.922835787Z [err]    where: undefined,
+2025-11-08T17:37:20.922843429Z [err]    schema: undefined,
+2025-11-08T17:37:20.922853891Z [err]    table: undefined,
+2025-11-08T17:37:20.922860605Z [err]    column: undefined,
+2025-11-08T17:37:20.922868373Z [err]    dataType: undefined,
+2025-11-08T17:37:20.922875169Z [err]    constraint: undefined,
+2025-11-08T17:37:20.922882621Z [err]    file: undefined,
+2025-11-08T17:37:20.922890329Z [err]    line: undefined,
+2025-11-08T17:37:20.922896470Z [err]    routine: undefined
+2025-11-08T17:37:20.922903917Z [err]  }
+2025-11-08T17:37:20.925002045Z [inf]  5:37:20 PM [express] POST /api/auth/login 401 in 992ms :: {"message":"Invalid email or password"}
