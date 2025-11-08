@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import logoUrl from "@assets/IMG_3463-removebg-preview_1762618462943.png";
 import puzzleIllustration from "@assets/generated_images/Modern_HR_teamwork_puzzle_illustration_79d97e82.png";
@@ -9,13 +11,20 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
+  const [showForm, setShowForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const handleLDAPLogin = async () => {
+  const handleContinue = () => {
+    setShowForm(true);
+  };
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
     try {
-      // For demo purposes, use admin credentials
-      await onLogin("admin@gapops.com", "Password123!");
+      await onLogin(email, password);
     } finally {
       setIsLoading(false);
     }
@@ -51,25 +60,70 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             </div>
           </div>
 
-          {/* LDAP Login Button */}
-          <div>
-            <Button 
-              onClick={handleLDAPLogin}
-              variant="secondary"
-              className="w-full h-12 text-base font-medium bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-colors" 
-              disabled={isLoading}
-              data-testid="button-ldap-login"
-            >
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                "Continue with SolvExtra LDAP Login"
-              )}
-            </Button>
-          </div>
+          {/* Login Form */}
+          {!showForm ? (
+            <div className="animate-in fade-in duration-300">
+              <Button 
+                onClick={handleContinue}
+                variant="secondary"
+                className="w-full h-12 text-base font-medium bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg transition-all hover:shadow-md" 
+                data-testid="button-continue"
+              >
+                Continue
+              </Button>
+            </div>
+          ) : (
+            <form onSubmit={handleLogin} className="space-y-6 animate-in slide-in-from-top-4 fade-in duration-500">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-sm font-medium text-gray-700">
+                  Email Address
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="Enter your email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  className="h-12 text-base rounded-lg border-gray-300 focus:border-teal-500 focus:ring-teal-500"
+                  disabled={isLoading}
+                  autoFocus
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-medium text-gray-700">
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className="h-12 text-base rounded-lg border-gray-300 focus:border-teal-500 focus:ring-teal-500"
+                  disabled={isLoading}
+                />
+              </div>
+
+              <Button 
+                type="submit"
+                className="w-full h-12 text-base font-medium bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg" 
+                disabled={isLoading}
+                data-testid="button-login"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                    Logging in...
+                  </>
+                ) : (
+                  "Log In"
+                )}
+              </Button>
+            </form>
+          )}
         </div>
       </div>
 
