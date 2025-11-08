@@ -78,6 +78,7 @@ export default function ManagementDashboard() {
       gapApi.markAsDuplicate(data.gapId, data.duplicateOfId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/gaps"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/metrics"] });
       setDuplicateDialogOpen(false);
       setSelectedGap(null);
       setSelectedOriginalGapId("");
