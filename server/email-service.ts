@@ -190,7 +190,9 @@ export async function sendGapMarkedAsDuplicateEmail(
   gapId: string,
   gapTitle: string,
   originalGapId: string,
-  originalGapTitle: string
+  originalGapTitle: string,
+  closedByName: string,
+  closedByEmail: string
 ): Promise<boolean> {
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -201,20 +203,26 @@ export async function sendGapMarkedAsDuplicateEmail(
       <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
         <p><strong>Your Gap ID:</strong> ${gapId}</p>
         <p><strong>Your Gap Title:</strong> ${gapTitle}</p>
+        <p><strong>Reason:</strong> Duplicate submission</p>
         <p style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #d1d5db;">
           <strong>Original Gap ID:</strong> ${originalGapId}
         </p>
         <p><strong>Original Gap Title:</strong> ${originalGapTitle}</p>
+        <p style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #d1d5db;">
+          <strong>Closed By:</strong> ${closedByName}
+        </p>
+        <p><strong>Email for Clarification:</strong> <a href="mailto:${closedByEmail}" style="color: #2563eb;">${closedByEmail}</a></p>
       </div>
       
-      <p>Your gap will be closed and linked to the original gap. You can track progress on the original gap for updates.</p>
+      <p>Your gap has been closed and linked to the original gap. You can track progress on the original gap for updates.</p>
+      <p>If you believe this determination is incorrect, please reach out to ${closedByName} at ${closedByEmail} for clarification.</p>
       
       <a href="https://gapops.replit.app" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px;">
         View Original Gap
       </a>
       
       <p style="margin-top: 30px; color: #6b7280; font-size: 12px;">
-        This is an automated notification from GapOps. If you believe this is incorrect, please contact your management team.
+        This is an automated notification from GapOps.
       </p>
     </div>
   `;

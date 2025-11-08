@@ -98,6 +98,18 @@ export default function GapDetailPage() {
     enabled: !!gapId,
   });
 
+  // Fetch original gap if this is a duplicate
+  const { data: originalGapData } = useQuery<{ gap: GapWithRelations }>({
+    queryKey: [`/api/gaps/${gap?.duplicateOfId}`],
+    enabled: !!gap?.duplicateOfId,
+  });
+
+  // Fetch audit logs to find who closed the gap
+  const { data: auditLogsData } = useQuery<{ logs: any[] }>({
+    queryKey: [`/api/audit-logs?limit=100`],
+    enabled: !!user && user.role === "Admin" && gap?.status === "Closed" && !!gap?.duplicateOfId,
+  });
+
   const addCommentMutation = useMutation({
     mutationFn: async ({ content, attachments }: { content: string; attachments: any[] }) => {
       return await apiRequest("POST", `/api/gaps/${gapId}/comments`, { content, attachments });
@@ -383,6 +395,44 @@ export default function GapDetailPage() {
               </TabsTrigger>
             </TabsList>
             <TabsContent value="details" className="mt-4 space-y-4">
+              {gap.duplicateOfId && originalGapData?.gap && (
+                <Card className="border-yellow-500 dark:border-yellow-700">
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <XCircle className="h-5 w-5 text-yellow-600 dark:text-yellow-500" />
+                      Closed as Duplicate
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        <strong>Reason:</strong> This gap has been identified as a duplicate submission.
+                      </p>
+                      <div className="bg-muted p-3 rounded-md space-y-2">
+                        <p className="text-sm">
+                          <strong>Original Gap:</strong> <span className="font-mono">{originalGapData.gap.gapId}</span>
+                        </p>
+                        <p className="text-sm">
+                          <strong>Title:</strong> {originalGapData.gap.title}
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/gap/${originalGapData.gap.id}`)}
+                          className="mt-2"
+                          data-testid="button-view-original-gap"
+                        >
+                          View Original Gap
+                        </Button>
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      For questions about this determination, please check your email notification which includes contact information for the person who closed this gap.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+              
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base">Description</CardTitle>
@@ -501,14 +551,31 @@ export default function GapDetailPage() {
               </Card>
             </TabsContent>
             <TabsContent value="discussion" className="mt-4">
-              <CommentThread 
-                comments={comments}
-                onAddComment={async (content, attachments) => {
-                  await addCommentMutation.mutateAsync({ content, attachments });
-                }}
-                isSubmitting={addCommentMutation.isPending}
-                gapId={Number(gapId)}
-              />
+              {gap.status === "Closed" || gap.status === "Resolved" ? (
+                <>
+                  <Card className="mb-4">
+                    <CardContent className="pt-6">
+                      <p className="text-sm text-muted-foreground text-center">
+                        <XCircle className="h-5 w-5 inline-block mr-2" />
+                        Discussion is closed. This gap has been {gap.status === "Closed" ? "closed" : "resolved"}.
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <CommentThread 
+                    comments={comments}
+                    gapId={Number(gapId)}
+                  />
+                </>
+              ) : (
+                <CommentThread 
+                  comments={comments}
+                  onAddComment={async (content, attachments) => {
+                    await addCommentMutation.mutateAsync({ content, attachments });
+                  }}
+                  isSubmitting={addCommentMutation.isPending}
+                  gapId={Number(gapId)}
+                />
+              )}
             </TabsContent>
           </Tabs>
         </div>

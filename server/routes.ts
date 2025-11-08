@@ -983,16 +983,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userAgent: req.headers["user-agent"] || null,
       });
 
-      // Send email notification to reporter
+      // Send email notification to reporter with closer's info
       const reporter = await storage.getUser(duplicateGap.reporterId);
-      if (reporter) {
+      const closer = await storage.getUser(req.session.userId!);
+      
+      if (reporter && closer) {
         await sendGapMarkedAsDuplicateEmail(
           reporter.name,
           reporter.email,
           duplicateGap.gapId,
           duplicateGap.title,
           originalGap.gapId,
-          originalGap.title
+          originalGap.title,
+          closer.name,
+          closer.email
         );
       }
 
