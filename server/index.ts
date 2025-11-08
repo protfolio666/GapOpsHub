@@ -1,5 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
+import { Pool } from "@neondatabase/serverless";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -12,8 +14,18 @@ if (!process.env.SESSION_SECRET) {
   );
 }
 
-// Session configuration
+// Session configuration with PostgreSQL store for production
+const PgSession = connectPgSimple(session);
+const sessionStore = process.env.NODE_ENV === "production" && process.env.DATABASE_URL
+  ? new PgSession({
+      pool: new Pool({ connectionString: process.env.DATABASE_URL }),
+      tableName: 'session',
+      createTableIfMissing: true,
+    })
+  : undefined;
+
 export const sessionMiddleware = session({
+  store: sessionStore,
   secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,

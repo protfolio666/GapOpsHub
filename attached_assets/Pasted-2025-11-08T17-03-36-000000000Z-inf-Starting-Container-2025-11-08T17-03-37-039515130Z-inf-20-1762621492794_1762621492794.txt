@@ -1,0 +1,42 @@
+2025-11-08T17:03:36.000000000Z [inf]  Starting Container
+2025-11-08T17:03:37.039515130Z [inf]  
+2025-11-08T17:03:37.039526991Z [inf]  > rest-express@1.0.0 start
+2025-11-08T17:03:37.039534514Z [inf]  > NODE_ENV=production node dist/index.js
+2025-11-08T17:03:37.039543466Z [inf]  
+2025-11-08T17:03:37.039610487Z [err]  npm warn config production Use `--omit=dev` instead.
+2025-11-08T17:03:37.198167289Z [err]  Warning: connect.session() MemoryStore is not
+2025-11-08T17:03:37.198175793Z [err]  designed for a production environment, as it will leak
+2025-11-08T17:03:37.198187128Z [err]  memory, and will not scale past a single process.
+2025-11-08T17:03:37.237010878Z [inf]  5:03:37 PM [express] serving on port 8080
+2025-11-08T17:03:42.099655816Z [inf]  5:03:41 PM [express] GET /api/auth/me 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:01.814246217Z [inf]  5:03:57 PM [express] POST /api/auth/login 200 in 1453ms :: {"user":{"id":10,"email":"abhishek@solvex…
+2025-11-08T17:04:01.814253606Z [inf]  5:03:57 PM [express] GET /api/dashboard/metrics 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:01.814258137Z [inf]  5:03:57 PM [express] GET /api/gaps 401 in 0ms :: {"message":"Authentication required"}
+2025-11-08T17:04:01.814263076Z [inf]  5:03:57 PM [express] GET /api/users/role/POC 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:01.814267486Z [inf]  5:03:57 PM [express] GET /api/gaps 401 in 0ms :: {"message":"Authentication required"}
+2025-11-08T17:04:03.395598669Z [inf]  5:04:02 PM [express] GET /api/gaps 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:03.395609284Z [inf]  5:04:02 PM [express] GET /api/auth/me 401 in 0ms :: {"message":"Authentication required"}
+2025-11-08T17:04:03.395616339Z [inf]  5:04:03 PM [express] GET /api/users/role/POC 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:03.395622210Z [inf]  5:04:03 PM [express] GET /api/gaps 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:03.395627867Z [inf]  5:04:03 PM [express] GET /api/dashboard/metrics 401 in 0ms :: {"message":"Authentication required"}
+2025-11-08T17:04:03.395634547Z [inf]  5:04:03 PM [express] GET /api/gaps 401 in 0ms :: {"message":"Authentication required"}
+2025-11-08T17:04:05.357493294Z [inf]  5:04:05 PM [express] GET /api/form-templates 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:06.715903762Z [inf]  5:04:06 PM [express] GET /api/dashboard/metrics 401 in 0ms :: {"message":"Authentication required"}
+2025-11-08T17:04:06.722843263Z [inf]  5:04:06 PM [express] GET /api/gaps 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:06.722853203Z [inf]  5:04:06 PM [express] GET /api/gaps 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:06.722860287Z [inf]  5:04:06 PM [express] GET /api/users/role/POC 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:11.367882338Z [inf]  5:04:11 PM [express] GET /api/tat-extensions/pending 401 in 1ms :: {"message":"Authentication requir…
+2025-11-08T17:04:11.580955396Z [inf]  5:04:11 PM [express] GET /api/users 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:12.354341058Z [inf]  5:04:12 PM [express] GET /api/poc-performance 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:14.962799541Z [inf]  5:04:14 PM [express] GET /api/users 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:17.449495105Z [inf]  5:04:17 PM [express] GET /api/auth/me 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:20.441490039Z [inf]  5:04:20 PM [express] GET /api/users/role/POC 401 in 0ms :: {"message":"Authentication required"}
+2025-11-08T17:04:20.441499491Z [inf]  5:04:20 PM [express] GET /api/dashboard/metrics 401 in 0ms :: {"message":"Authentication required"}
+2025-11-08T17:04:20.441578069Z [inf]  5:04:20 PM [express] POST /api/auth/login 200 in 1064ms :: {"user":{"id":10,"email":"abhishek@solvex…
+2025-11-08T17:04:20.441588854Z [inf]  5:04:20 PM [express] GET /api/gaps 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:20.441602119Z [inf]  5:04:20 PM [express] GET /api/gaps 401 in 0ms :: {"message":"Authentication required"}
+2025-11-08T17:04:21.933258876Z [inf]  5:04:21 PM [express] GET /api/form-templates 401 in 0ms :: {"message":"Authentication required"}
+2025-11-08T17:04:22.423844209Z [inf]  5:04:22 PM [express] GET /api/users 401 in 1ms :: {"message":"Authentication required"}
+2025-11-08T17:04:22.891827909Z [inf]  5:04:22 PM [express] GET /api/form-templates 401 in 0ms :: {"message":"Authentication required"}
+2025-11-08T17:04:24.591949904Z [inf]  5:04:24 PM [express] GET /api/users 401 in 0ms :: {"message":"Authentication required"}
+2025-11-08T17:04:25.675999981Z [inf]  5:04:25 PM [express] GET /api/auth/me 401 in 0ms :: {"message":"Authentication required"}
