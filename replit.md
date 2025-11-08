@@ -39,7 +39,27 @@ The system is built on a React 18 (TypeScript) frontend utilizing `shadcn/ui` fo
 - **Socket.io**: Enables real-time, bidirectional communication between web clients and the server.
 ## Recent Changes
 
-### November 8, 2025 (Latest - File Upload & Email Fixes)
+### November 8, 2025 (Latest - POC Performance & TAT Extensions Review)
+- **POC Performance Tracking System**: Complete performance metrics and dashboard
+  - Admin dashboard showing all POCs with comprehensive performance metrics
+  - POC-specific dashboard showing their own performance data
+  - Metrics include: assigned gaps, resolved gaps, reopen rate with detailed history, delayed responses vs TAT, TAT extension requests count
+  - Performance score calculation based on resolution rate and timeliness
+  - Reopen history shows dates and resolutions given at each reopening
+  - Backend endpoints: `/api/poc-performance` (Admin), `/api/poc-performance/me` (POC)
+  - Role-based access control with proper RBAC enforcement
+- **TAT Extension Requests Review Page**: Admin/Management workflow for TAT extensions
+  - New dedicated page at `/admin/tat-extensions` and `/management/tat-extensions`
+  - Shows all pending TAT extension requests with gap details
+  - Approve/reject functionality with immediate feedback and cache invalidation
+  - Added to Admin and Management sidebars with Clock icon
+  - Complete RBAC enforcement (Admin/Management only)
+- **Reports Page Filter Fix**: Fixed Apply Filters button for Admin/Management
+  - Query now defers until "Apply Filters" is clicked using hasAppliedFilters state
+  - POC/QA users still auto-load data immediately (no Apply button needed)
+  - Clear Filters properly resets both filter state and enable flag
+
+### November 8, 2025 (Earlier - File Upload & Email Fixes)
 - **File Upload Integration**: Complete file upload support for dynamic form templates
   - Created `useFileUpload` hook for async file uploads to `/api/files/upload`
   - Updated DynamicFormRenderer to upload files immediately when selected
