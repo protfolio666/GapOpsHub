@@ -18,6 +18,7 @@ import UserManagementPage from "@/pages/UserManagementPage";
 import FormBuilderPage from "@/pages/FormBuilderPage";
 import AdminSettingsPage from "@/pages/AdminSettingsPage";
 import AllGapsPage from "@/pages/AllGapsPage";
+import OverdueGapsPage from "@/pages/OverdueGapsPage";
 import ReportsPage from "@/pages/ReportsPage";
 import TATExtensionsPage from "@/pages/TATExtensionsPage";
 import POCPerformancePage from "@/pages/POCPerformancePage";
@@ -73,8 +74,20 @@ function Router({ user }: { user: PublicUser }) {
         <ProtectedRoute user={user} allowedRoles={["Admin", "Management"]} component={AllGapsPage} />
       </Route>
       
+      <Route path="/admin/overdue">
+        <ProtectedRoute user={user} allowedRoles={["Admin", "Management", "POC"]} component={OverdueGapsPage} />
+      </Route>
+      
       <Route path="/management/gaps">
         <ProtectedRoute user={user} allowedRoles={["Admin", "Management"]} component={AllGapsPage} />
+      </Route>
+      
+      <Route path="/management/overdue">
+        <ProtectedRoute user={user} allowedRoles={["Admin", "Management", "POC"]} component={OverdueGapsPage} />
+      </Route>
+      
+      <Route path="/poc/overdue">
+        <ProtectedRoute user={user} allowedRoles={["Admin", "Management", "POC"]} component={OverdueGapsPage} />
       </Route>
       
       <Route path="/management/form-builder">
