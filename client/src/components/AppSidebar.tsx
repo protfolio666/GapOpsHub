@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { authApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
+import logoUrl from "@assets/IMG_3463-removebg-preview_1762619848377.png";
 
 interface AppSidebarProps {
   userRole: "Admin" | "Management" | "QA/Ops" | "POC";
@@ -80,8 +81,12 @@ export default function AppSidebar({ userRole, userName }: AppSidebarProps) {
     <Sidebar data-testid="sidebar-navigation">
       <SidebarHeader className="p-4 border-b">
         <div className="flex items-center gap-2">
-          <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-sm">SE</span>
+          <div className="h-8 w-8 flex items-center justify-center">
+            <img 
+              src={logoUrl} 
+              alt="SolvExtra GO Logo" 
+              className="h-8 w-8 object-contain"
+            />
           </div>
           <span className="font-semibold text-lg">SolvExtra GO</span>
         </div>
