@@ -1,0 +1,165 @@
+2025-11-08T17:40:09.749688887Z [inf]  
+2025-11-08T17:40:13.741682063Z [inf]  [35m[Region: asia-southeast1][0m
+2025-11-08T17:40:13.776344051Z [inf]  
+2025-11-08T17:40:13.776376991Z [inf]  [38;2;125;86;243m╭─────────────────╮[0m
+2025-11-08T17:40:13.776381180Z [inf]  [38;2;125;86;243m│[0m Railpack 0.10.0 [38;2;125;86;243m│[0m
+2025-11-08T17:40:13.776384450Z [inf]  [38;2;125;86;243m╰─────────────────╯[0m
+2025-11-08T17:40:13.776389216Z [inf]  
+2025-11-08T17:40:13.776392550Z [inf]  [97m↳ Detected Node[0m
+2025-11-08T17:40:13.776395677Z [inf]  [97m↳ Using npm package manager[0m
+2025-11-08T17:40:13.776398597Z [inf]  
+2025-11-08T17:40:13.776401631Z [inf]  [1mPackages[0m
+2025-11-08T17:40:13.776405035Z [inf]  [38;5;238m──────────[0m
+2025-11-08T17:40:13.776407845Z [inf]  [95mnode[0m  [38;5;238m│[0m  [96m22.21.1[0m  [38;5;238m│[0m  railpack default (22)
+2025-11-08T17:40:13.776410699Z [inf]  
+2025-11-08T17:40:13.776413329Z [inf]  [1mSteps[0m
+2025-11-08T17:40:13.776416127Z [inf]  [38;5;238m──────────[0m
+2025-11-08T17:40:13.776419133Z [inf]  [95m▸ install[0m
+2025-11-08T17:40:13.776421799Z [inf]  [38;5;245m$[0m [1mnpm ci[0m
+2025-11-08T17:40:13.776424397Z [inf]  
+2025-11-08T17:40:13.776427660Z [inf]  [95m▸ build[0m
+2025-11-08T17:40:13.776430726Z [inf]  [38;5;245m$[0m [1mnpm run build[0m
+2025-11-08T17:40:13.776433548Z [inf]  
+2025-11-08T17:40:13.776436130Z [inf]  [1mDeploy[0m
+2025-11-08T17:40:13.776438941Z [inf]  [38;5;238m──────────[0m
+2025-11-08T17:40:13.776441826Z [inf]  [38;5;245m$[0m [1mnpm run start[0m
+2025-11-08T17:40:13.776444424Z [inf]  
+2025-11-08T17:40:13.776447084Z [inf]  
+2025-11-08T17:40:13.777634024Z [inf]  Successfully prepared Railpack plan for build
+2025-11-08T17:40:13.777665888Z [inf]  
+2025-11-08T17:40:13.777673238Z [inf]  
+2025-11-08T17:40:13.778074767Z [inf]  context: 72fd-OaZk
+2025-11-08T17:40:13.925562426Z [inf]  [internal] load build definition from railpack-plan.json
+2025-11-08T17:40:13.925598936Z [inf]  [internal] load build definition from railpack-plan.json
+2025-11-08T17:40:13.925617968Z [inf]  [internal] load build definition from railpack-plan.json
+2025-11-08T17:40:13.925631919Z [inf]  [internal] load build definition from railpack-plan.json
+2025-11-08T17:40:13.933559850Z [inf]  [internal] load build definition from railpack-plan.json
+2025-11-08T17:40:13.934901313Z [inf]  resolve image config for docker-image://ghcr.io/railwayapp/railpack-frontend:v0.10.0
+2025-11-08T17:40:14.479464771Z [inf]  resolve image config for docker-image://ghcr.io/railwayapp/railpack-frontend:v0.10.0
+2025-11-08T17:40:14.479511124Z [inf]  docker-image://ghcr.io/railwayapp/railpack-frontend:v0.10.0@sha256:0a243902b3816689bd8b6db5f75d951d3bb3dd9421c6667b4b78692bceb70975
+2025-11-08T17:40:14.479602097Z [inf]  docker-image://ghcr.io/railwayapp/railpack-frontend:v0.10.0@sha256:0a243902b3816689bd8b6db5f75d951d3bb3dd9421c6667b4b78692bceb70975
+2025-11-08T17:40:14.484350351Z [inf]  docker-image://ghcr.io/railwayapp/railpack-frontend:v0.10.0@sha256:0a243902b3816689bd8b6db5f75d951d3bb3dd9421c6667b4b78692bceb70975
+2025-11-08T17:40:14.484610299Z [inf]  docker-image://ghcr.io/railwayapp/railpack-frontend:v0.10.0@sha256:0a243902b3816689bd8b6db5f75d951d3bb3dd9421c6667b4b78692bceb70975
+2025-11-08T17:40:14.643291516Z [inf]  load build definition from railpack-plan.json
+2025-11-08T17:40:14.643339555Z [inf]  load build definition from railpack-plan.json
+2025-11-08T17:40:14.643401185Z [inf]  load build definition from railpack-plan.json
+2025-11-08T17:40:14.652969006Z [inf]  load build definition from railpack-plan.json
+2025-11-08T17:40:14.663611786Z [inf]  create mise config
+2025-11-08T17:40:14.663658074Z [inf]  mkdir /etc/mise
+2025-11-08T17:40:14.663665852Z [inf]  docker-image://ghcr.io/railwayapp/railpack-builder:latest
+2025-11-08T17:40:14.663670914Z [inf]  docker-image://ghcr.io/railwayapp/railpack-runtime:latest
+2025-11-08T17:40:14.663712531Z [inf]  [railpack] hash used secrets
+2025-11-08T17:40:14.663720647Z [inf]  [railpack] copy secrets hash
+2025-11-08T17:40:14.663728350Z [inf]  [railpack] secrets hash
+2025-11-08T17:40:14.663733779Z [inf]  [railpack] loading secrets
+2025-11-08T17:40:14.663739178Z [inf]  copy /root/.local/state/mise
+2025-11-08T17:40:14.663745174Z [inf]  copy /etc/mise/config.toml
+2025-11-08T17:40:14.663750742Z [inf]  copy /usr/local/bin/mise
+2025-11-08T17:40:14.663761259Z [inf]  copy /mise/installs
+2025-11-08T17:40:14.663767139Z [inf]  copy /mise/shims
+2025-11-08T17:40:14.663772546Z [inf]  install mise packages: node
+2025-11-08T17:40:14.663792079Z [inf]  copy package.json
+2025-11-08T17:40:14.663797824Z [inf]  loading .
+2025-11-08T17:40:14.663804258Z [inf]  mkdir -p /app/node_modules/.cache
+2025-11-08T17:40:14.663809751Z [inf]  [railpack] copy used secrets hash
+2025-11-08T17:40:14.663821255Z [inf]  npm ci
+2025-11-08T17:40:14.663826974Z [inf]  copy package-lock.json
+2025-11-08T17:40:14.663852315Z [inf]  [railpack] merge ghcr.io/railwayapp/railpack-runtime:latest, $packages:mise, $build, $build
+2025-11-08T17:40:14.663859411Z [inf]  copy /app
+2025-11-08T17:40:14.663865066Z [inf]  copy /root/.cache
+2025-11-08T17:40:14.663870120Z [inf]  copy /app/node_modules
+2025-11-08T17:40:14.663875133Z [inf]  npm run build
+2025-11-08T17:40:14.663880202Z [inf]  copy / /app
+2025-11-08T17:40:14.664069828Z [inf]  docker-image://ghcr.io/railwayapp/railpack-runtime:latest
+2025-11-08T17:40:14.664083326Z [inf]  docker-image://ghcr.io/railwayapp/railpack-builder:latest
+2025-11-08T17:40:14.664089826Z [inf]  loading .
+2025-11-08T17:40:14.664105350Z [inf]  [railpack] loading secrets
+2025-11-08T17:40:14.664110954Z [inf]  [railpack] secrets hash
+2025-11-08T17:40:14.937266323Z [inf]  [railpack] loading secrets
+2025-11-08T17:40:14.937508288Z [inf]  loading .
+2025-11-08T17:40:14.937532239Z [inf]  [railpack] secrets hash
+2025-11-08T17:40:14.947316797Z [inf]  [railpack] secrets hash
+2025-11-08T17:40:14.948738881Z [inf]  [railpack] loading secrets
+2025-11-08T17:40:14.948788353Z [inf]  [railpack] copy secrets hash
+2025-11-08T17:40:14.958664155Z [inf]  [railpack] copy secrets hash
+2025-11-08T17:40:14.959981598Z [inf]  [railpack] hash used secrets
+2025-11-08T17:40:15.001094505Z [inf]  loading .
+2025-11-08T17:40:15.054961757Z [inf]  [railpack] hash used secrets
+2025-11-08T17:40:15.161982404Z [inf]  docker-image://ghcr.io/railwayapp/railpack-runtime:latest
+2025-11-08T17:40:15.178272422Z [inf]  docker-image://ghcr.io/railwayapp/railpack-builder:latest
+2025-11-08T17:40:15.179114322Z [inf]  mkdir /etc/mise
+2025-11-08T17:40:15.179130429Z [inf]  create mise config
+2025-11-08T17:40:15.179142713Z [inf]  install mise packages: node
+2025-11-08T17:40:15.179149738Z [inf]  [railpack] copy used secrets hash
+2025-11-08T17:40:15.179169373Z [inf]  mkdir -p /app/node_modules/.cache
+2025-11-08T17:40:15.179177768Z [inf]  copy package.json
+2025-11-08T17:40:15.179184362Z [inf]  copy package-lock.json
+2025-11-08T17:40:15.179190362Z [inf]  npm ci
+2025-11-08T17:40:15.179201933Z [inf]  copy / /app
+2025-11-08T17:40:15.209498547Z [inf]  copy / /app
+2025-11-08T17:40:15.210213075Z [inf]  npm run build
+2025-11-08T17:40:15.380322315Z [inf]  npm warn config production Use `--omit=dev` instead.
+
+2025-11-08T17:40:15.392990619Z [inf]  
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+
+2025-11-08T17:40:15.581003562Z [inf]  [36mvite v5.4.20 [32mbuilding for production...[36m[39m
+
+2025-11-08T17:40:15.625648753Z [inf]  transforming...
+
+2025-11-08T17:40:16.620144473Z [inf]  
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+
+2025-11-08T17:40:19.681824247Z [inf]  [32m✓[39m 2098 modules transformed.
+
+2025-11-08T17:40:20.094415602Z [inf]  rendering chunks...
+
+2025-11-08T17:40:20.107854078Z [inf]  computing gzip size...
+
+2025-11-08T17:40:20.136146705Z [inf]  [2m../dist/public/[22m[32mindex.html                                                           [39m[1m[2m    0.92 kB[22m[1m[22m[2m │ gzip:   0.50 kB[22m
+
+2025-11-08T17:40:20.136238466Z [inf]  [2m../dist/public/[22m[2massets/[22m[32mIMG_3463-removebg-preview_1762618462943-CfbEqdrw.png          [39m[1m[2m   68.95 kB[22m[1m[22m
+
+2025-11-08T17:40:20.136318395Z [inf]  [2m../dist/public/[22m[2massets/[22m[32mModern_HR_teamwork_puzzle_illustration_79d97e82-Ca35o0aH.png  [39m[1m[2m  656.82 kB[22m[1m[22m
+
+2025-11-08T17:40:20.136416523Z [inf]  [2m../dist/public/[22m[2massets/[22m[35mindex-CIvSUqX_.css                                            [39m[1m[2m   96.55 kB[22m[1m[22m[2m │ gzip:  14.92 kB[22m
+
+2025-11-08T17:40:20.136471709Z [inf]  [2m../dist/public/[22m[2massets/[22m[36mindex-CpauSso3.js                                             [39m[1m[33m1,001.19 kB[39m[22m[2m │ gzip: 309.72 kB[22m
+
+2025-11-08T17:40:20.136588569Z [inf]  [33m
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.[39m
+
+2025-11-08T17:40:20.136812847Z [inf]  [32m✓ built in 4.54s[39m
+
+2025-11-08T17:40:20.185653887Z [inf]  
+  dist/index.js  121.2kb
+
+⚡ Done in 9ms
+
+2025-11-08T17:40:20.376350024Z [inf]  npm run build
+2025-11-08T17:40:20.526363851Z [inf]  docker-image://ghcr.io/railwayapp/railpack-runtime:latest
+2025-11-08T17:40:20.526402248Z [inf]  docker-image://ghcr.io/railwayapp/railpack-runtime:latest
+2025-11-08T17:40:21.106217617Z [inf]  copy /root/.cache
+2025-11-08T17:40:25.304247143Z [inf]  copy /mise/shims
+2025-11-08T17:40:25.304281517Z [inf]  copy /mise/installs
+2025-11-08T17:40:25.304291083Z [inf]  copy /usr/local/bin/mise
+2025-11-08T17:40:25.304297281Z [inf]  copy /etc/mise/config.toml
+2025-11-08T17:40:25.304309097Z [inf]  copy /root/.local/state/mise
+2025-11-08T17:40:25.304316285Z [inf]  copy /app/node_modules
+2025-11-08T17:40:25.304323000Z [inf]  copy /root/.cache
+2025-11-08T17:40:25.304354947Z [inf]  copy /app
+2025-11-08T17:40:25.304371830Z [inf]  copy /root/.local/state/mise
+2025-11-08T17:40:25.304381118Z [inf]  copy /app/node_modules
+2025-11-08T17:40:25.564032974Z [inf]  copy /app
+2025-11-08T17:40:25.564963284Z [inf]  [railpack] merge ghcr.io/railwayapp/railpack-runtime:latest, $packages:mise, $build, $build
+2025-11-08T17:40:25.573216294Z [inf]  [railpack] merge ghcr.io/railwayapp/railpack-runtime:latest, $packages:mise, $build, $build
+2025-11-08T17:40:25.981229124Z [inf]  [auth] sharing credentials for production-asia-southeast1-eqsg3a.railway-registry.com
+2025-11-08T17:40:25.981295252Z [inf]  [auth] sharing credentials for production-asia-southeast1-eqsg3a.railway-registry.com
+2025-11-08T17:40:26.741381643Z [inf]  importing to docker
+2025-11-08T17:40:33.668946458Z [inf]  importing to docker
+2025-11-08T17:40:34.655060965Z [inf]  [92mBuild time: 20.88 seconds[0m

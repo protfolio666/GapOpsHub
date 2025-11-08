@@ -1,0 +1,34 @@
+2025-11-08T17:40:49.000000000Z [inf]  Starting Container
+2025-11-08T17:40:50.119833362Z [inf]  
+2025-11-08T17:40:50.119854567Z [inf]  > rest-express@1.0.0 start
+2025-11-08T17:40:50.119872737Z [inf]  > NODE_ENV=production node dist/index.js
+2025-11-08T17:40:50.119879714Z [err]  npm warn config production Use `--omit=dev` instead.
+2025-11-08T17:40:50.119888010Z [inf]  
+2025-11-08T17:40:50.497502913Z [inf]  5:40:50 PM [express] serving on port 8080
+2025-11-08T17:41:40.600066830Z [inf]  5:41:39 PM [express] GET /api/auth/me 401 in 2ms :: {"message":"Authentication required"}
+2025-11-08T17:41:43.107163230Z [err]  [AUTH] Authentication error for abhishek@solvextra.com: error: password authentication failed for user 'neondb_owner'
+2025-11-08T17:41:43.107180976Z [err]      at file:///app/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-11-08T17:41:43.107195462Z [err]      at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+2025-11-08T17:41:43.107204549Z [err]      at async NeonPreparedQuery.execute (file:///app/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-11-08T17:41:43.107212983Z [err]      at async DatabaseStorage.getUserByEmail (file:///app/dist/index.js:296:20)
+2025-11-08T17:41:43.107226653Z [err]      at async authenticateUser (file:///app/dist/index.js:811:18)
+2025-11-08T17:41:43.107235044Z [err]      at async file:///app/dist/index.js:1634:20 {
+2025-11-08T17:41:43.107244115Z [err]    length: 75,
+2025-11-08T17:41:43.107251905Z [err]    severity: 'ERROR',
+2025-11-08T17:41:43.107261283Z [err]    code: 'XX000',
+2025-11-08T17:41:43.107268610Z [err]    detail: undefined,
+2025-11-08T17:41:43.107285898Z [err]    hint: undefined,
+2025-11-08T17:41:43.107294431Z [err]    position: undefined,
+2025-11-08T17:41:43.107302008Z [err]    internalPosition: undefined,
+2025-11-08T17:41:43.107309103Z [err]    internalQuery: undefined,
+2025-11-08T17:41:43.107316421Z [err]    where: undefined,
+2025-11-08T17:41:43.107323286Z [err]    schema: undefined,
+2025-11-08T17:41:43.107331244Z [err]    table: undefined,
+2025-11-08T17:41:43.107337897Z [err]    column: undefined,
+2025-11-08T17:41:43.107344804Z [err]    dataType: undefined,
+2025-11-08T17:41:43.107351422Z [err]    constraint: undefined,
+2025-11-08T17:41:43.107358966Z [err]    file: undefined,
+2025-11-08T17:41:43.107368271Z [err]    line: undefined,
+2025-11-08T17:41:43.107375214Z [err]    routine: undefined
+2025-11-08T17:41:43.107382272Z [err]  }
+2025-11-08T17:41:43.107390135Z [inf]  5:41:43 PM [express] POST /api/auth/login 401 in 987ms :: {"message":"Invalid email or password"}
