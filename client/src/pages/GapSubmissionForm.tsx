@@ -57,6 +57,7 @@ export default function GapSubmissionForm() {
       responses: FormResponses;
       title: string;
       description: string;
+      attachments: any[];
     }) => {
       const response = await fetch("/api/gaps", {
         method: "POST",
@@ -70,6 +71,7 @@ export default function GapSubmissionForm() {
           description: data.description,
           status: "PendingAI",
           priority: "Medium",
+          attachments: data.attachments,
         }),
       });
       
@@ -189,12 +191,23 @@ export default function GapSubmissionForm() {
       ? formResponses[schema.sections[0].id]?.[firstTextQuestion.id] || "Untitled Gap"
       : "Untitled Gap";
 
-    // Combine all text responses for description
+    // Extract file attachments from formResponses
+    const attachments: any[] = [];
+    Object.entries(formResponses).forEach(([sectionKey, sectionData]) => {
+      Object.entries(sectionData).forEach(([questionId, value]) => {
+        // Check if value is a file upload object
+        if (value && typeof value === 'object' && value.originalName && value.path) {
+          attachments.push(value);
+        }
+      });
+    });
+
+    // Combine all text responses for description (excluding file objects)
     let description = "";
     schema.sections.forEach(section => {
       section.questions.forEach((question: any) => {
         const response = formResponses[section.id]?.[question.id];
-        if (response) {
+        if (response && !(typeof response === 'object' && response.originalName)) {
           description += `**${question.text}:** ${response}\n\n`;
         }
       });
@@ -206,6 +219,7 @@ export default function GapSubmissionForm() {
       responses: formResponses,
       title,
       description: description || "Gap submitted via form template",
+      attachments,
     });
   };
 

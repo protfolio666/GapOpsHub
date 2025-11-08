@@ -7,7 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2 } from "lucide-react";
+import { Plus, Trash2, Upload, FileText, Loader2 } from "lucide-react";
+import { useFileUpload, type UploadedFile } from "@/hooks/useFileUpload";
 
 // Type definitions matching FormBuilderPage
 interface Question {
@@ -71,6 +72,8 @@ interface DynamicFormRendererProps {
 export default function DynamicFormRenderer({ schema, onResponsesChange, initialResponses = {} }: DynamicFormRendererProps) {
   const [responses, setResponses] = useState<FormResponses>(initialResponses);
   const [sectionInstances, setSectionInstances] = useState<{[sectionId: string]: number}>({});
+  const [uploadingFiles, setUploadingFiles] = useState<{[key: string]: boolean}>({});
+  const { uploadFile } = useFileUpload();
 
   // Initialize section instances for repeatable sections
   useEffect(() => {
@@ -394,17 +397,43 @@ export default function DynamicFormRenderer({ schema, onResponsesChange, initial
         )}
 
         {question.type === "file" && (
-          <Input
-            type="file"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) {
-                updateResponse(sectionId, question.id, file.name, instanceIndex);
-              }
-            }}
-            required={question.required}
-            data-testid={`input-${question.id}`}
-          />
+          <div className="space-y-2">
+            <Input
+              type="file"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  const uploadKey = `${sectionId}_${question.id}_${instanceIndex}`;
+                  setUploadingFiles(prev => ({ ...prev, [uploadKey]: true }));
+                  
+                  const uploadedFile = await uploadFile(file);
+                  
+                  setUploadingFiles(prev => ({ ...prev, [uploadKey]: false }));
+                  
+                  if (uploadedFile) {
+                    updateResponse(sectionId, question.id, uploadedFile, instanceIndex);
+                  }
+                }
+              }}
+              required={question.required}
+              data-testid={`input-${question.id}`}
+              disabled={uploadingFiles[`${sectionId}_${question.id}_${instanceIndex}`]}
+            />
+            
+            {uploadingFiles[`${sectionId}_${question.id}_${instanceIndex}`] && (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Uploading...</span>
+              </div>
+            )}
+            
+            {value && typeof value === 'object' && value.originalName && (
+              <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                <FileText className="h-4 w-4" />
+                <span>{value.originalName} ({(value.size / 1024).toFixed(1)} KB)</span>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Remarks field */}
