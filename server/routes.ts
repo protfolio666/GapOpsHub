@@ -1724,6 +1724,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ==================== POC PERFORMANCE ROUTES ====================
+  
+  app.get("/api/poc-performance", requireRole("Admin"), async (req, res) => {
+    try {
+      const performanceData = await storage.getPocPerformanceMetrics();
+      return res.json({ performance: performanceData });
+    } catch (error) {
+      console.error("Get POC performance error:", error);
+      return res.status(500).json({ message: "Failed to get POC performance" });
+    }
+  });
+
+  app.get("/api/poc-performance/me", requireRole("POC"), async (req, res) => {
+    try {
+      const performanceData = await storage.getPocPerformanceMetrics(req.session.userId!);
+      return res.json({ performance: performanceData[0] || null });
+    } catch (error) {
+      console.error("Get my performance error:", error);
+      return res.status(500).json({ message: "Failed to get performance" });
+    }
+  });
+
   // ==================== AUDIT LOG ROUTES ====================
   
   app.get("/api/audit-logs", requireRole("Admin"), async (req, res) => {

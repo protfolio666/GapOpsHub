@@ -19,6 +19,8 @@ import FormBuilderPage from "@/pages/FormBuilderPage";
 import AdminSettingsPage from "@/pages/AdminSettingsPage";
 import AllGapsPage from "@/pages/AllGapsPage";
 import ReportsPage from "@/pages/ReportsPage";
+import TATExtensionsPage from "@/pages/TATExtensionsPage";
+import POCPerformancePage from "@/pages/POCPerformancePage";
 import NotFound from "@/pages/not-found";
 import type { PublicUser } from "@shared/schema";
 import { authApi } from "@/lib/api";
@@ -93,6 +95,22 @@ function Router({ user }: { user: PublicUser }) {
       
       <Route path="/qa/reports">
         <ProtectedRoute user={user} allowedRoles={["Admin", "Management", "POC", "QA/Ops"]} component={ReportsPage} />
+      </Route>
+      
+      <Route path="/admin/tat-extensions">
+        <ProtectedRoute user={user} allowedRoles={["Admin", "Management"]} component={TATExtensionsPage} />
+      </Route>
+      
+      <Route path="/management/tat-extensions">
+        <ProtectedRoute user={user} allowedRoles={["Admin", "Management"]} component={TATExtensionsPage} />
+      </Route>
+      
+      <Route path="/admin/poc-performance">
+        <ProtectedRoute user={user} allowedRoles={["Admin"]} component={() => <POCPerformancePage isAdmin={true} />} />
+      </Route>
+      
+      <Route path="/poc/performance">
+        <ProtectedRoute user={user} allowedRoles={["POC"]} component={() => <POCPerformancePage isAdmin={false} />} />
       </Route>
       
       <Route path="/admin/gaps/:id" component={GapDetailPage} />

@@ -50,6 +50,7 @@ export default function ReportsPage() {
   const { toast } = useToast();
   const [filters, setFilters] = useState<ReportFilters>({});
   const [selectedTemplateForExport, setSelectedTemplateForExport] = useState<number | undefined>();
+  const [hasAppliedFilters, setHasAppliedFilters] = useState(false);
 
   // Fetch current user
   const { data: userData } = useQuery<{ user: User }>({
@@ -75,7 +76,7 @@ export default function ReportsPage() {
   const autoFetch = userData?.user && (userData.user.role === "POC" || userData.user.role === "QA/Ops");
 
   // Fetch filtered gaps
-  const { data: reportData, isLoading, refetch } = useQuery<{ gaps: GapWithRelations[]; total: number }>({
+  const { data: reportData, isLoading } = useQuery<{ gaps: GapWithRelations[]; total: number }>({
     queryKey: ["/api/reports/gaps", filters],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -100,13 +101,13 @@ export default function ReportsPage() {
 
       return response.json();
     },
-    enabled: autoFetch || false, // Auto-fetch for POC/QA, manual for Admin/Management
+    enabled: autoFetch || hasAppliedFilters, // Auto-fetch for POC/QA, manual for Admin/Management
   });
 
   const gaps = reportData?.gaps || [];
 
   const handleApplyFilters = () => {
-    refetch();
+    setHasAppliedFilters(true);
   };
 
   const handleClearFilters = () => {

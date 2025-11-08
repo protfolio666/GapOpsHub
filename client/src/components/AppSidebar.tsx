@@ -1,5 +1,5 @@
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
-import { LayoutDashboard, FileText, Settings, Users, BookOpen, BarChart3, PlusCircle, ListChecks, FormInput, LogOut } from "lucide-react";
+import { LayoutDashboard, FileText, Settings, Users, BookOpen, BarChart3, PlusCircle, ListChecks, FormInput, LogOut, Clock, TrendingUp } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import UserAvatar from "./UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ const menuItems = {
   Admin: [
     { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
     { title: "All Gaps", url: "/admin/gaps", icon: FileText },
+    { title: "TAT Extensions", url: "/admin/tat-extensions", icon: Clock },
+    { title: "POC Performance", url: "/admin/poc-performance", icon: TrendingUp },
     { title: "Users & Roles", url: "/admin/users", icon: Users },
     { title: "Form Builder", url: "/admin/form-builder", icon: FormInput },
     { title: "SOPs", url: "/admin/sops", icon: BookOpen },
@@ -26,6 +28,7 @@ const menuItems = {
   Management: [
     { title: "Dashboard", url: "/management", icon: LayoutDashboard },
     { title: "All Gaps", url: "/management/gaps", icon: FileText },
+    { title: "TAT Extensions", url: "/management/tat-extensions", icon: Clock },
     { title: "Form Builder", url: "/management/form-builder", icon: FormInput },
     { title: "Reports", url: "/management/reports", icon: BarChart3 },
   ],

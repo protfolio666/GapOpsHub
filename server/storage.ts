@@ -103,6 +103,9 @@ export interface IStorage {
   getAuditLogsByUser(userId: number, limit?: number): Promise<AuditLog[]>;
   getAuditLogsByEntity(entityType: string, entityId: number, limit?: number): Promise<AuditLog[]>;
   createAuditLog(auditLog: InsertAuditLog): Promise<AuditLog>;
+  
+  // POC Performance operations
+  getPocPerformanceMetrics(pocId?: number): Promise<any[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -691,6 +694,129 @@ export class DatabaseStorage implements IStorage {
   async createAuditLog(auditLog: InsertAuditLog): Promise<AuditLog> {
     const [newAuditLog] = await db.insert(auditLogs).values(auditLog).returning();
     return newAuditLog;
+  }
+
+  // POC Performance operations
+  async getPocPerformanceMetrics(pocId?: number): Promise<any[]> {
+    // Get all POC users or specific POC
+    const pocUsers = pocId 
+      ? await db.select().from(users).where(eq(users.id, pocId))
+      : await db.select().from(users).where(eq(users.role, "POC"));
+
+    const performanceData = await Promise.all(
+      pocUsers.map(async (poc) => {
+        // Get all gaps where POC is assigned (primary assignee or in POC list)
+        const primaryGaps = await db
+          .select()
+          .from(gaps)
+          .where(eq(gaps.assignedToId, poc.id));
+        
+        const pocListGaps = await db
+          .select({ gap: gaps })
+          .from(gapPocs)
+          .innerJoin(gaps, eq(gapPocs.gapId, gaps.id))
+          .where(eq(gapPocs.userId, poc.id));
+        
+        // Combine and deduplicate gaps
+        const allGapIds = new Set([
+          ...primaryGaps.map(g => g.id),
+          ...pocListGaps.map(g => g.gap.id)
+        ]);
+        const allGaps = await db
+          .select()
+          .from(gaps)
+          .where(sql`${gaps.id} = ANY(${Array.from(allGapIds)})`);
+        
+        const totalAssigned = allGaps.length;
+        
+        // Count resolved gaps (status = Resolved or Closed)
+        const resolvedGaps = allGaps.filter(
+          g => g.status === "Resolved" || g.status === "Closed"
+        );
+        const totalResolved = resolvedGaps.length;
+        
+        // Get gaps that were reopened (reopenedById is not null)
+        const reopenedGaps = allGaps.filter(g => g.reopenedById !== null);
+        const totalReopened = reopenedGaps.length;
+        
+        // Get reopen history for each reopened gap
+        const reopenHistory = await Promise.all(
+          reopenedGaps.map(async (gap) => {
+            // Get all reopen audit logs for this gap
+            const reopenLogs = await db
+              .select()
+              .from(auditLogs)
+              .where(
+                and(
+                  eq(auditLogs.entityType, "gap"),
+                  eq(auditLogs.entityId, gap.id),
+                  eq(auditLogs.action, "reopen")
+                )
+              )
+              .orderBy(auditLogs.createdAt);
+            
+            // Get resolution history
+            const resolutionLogs = await db
+              .select()
+              .from(auditLogs)
+              .where(
+                and(
+                  eq(auditLogs.entityType, "gap"),
+                  eq(auditLogs.entityId, gap.id),
+                  eq(auditLogs.action, "resolve")
+                )
+              )
+              .orderBy(auditLogs.createdAt);
+            
+            return {
+              gapId: gap.gapId,
+              gapTitle: gap.title,
+              reopenCount: reopenLogs.length,
+              reopenDates: reopenLogs.map(log => log.createdAt),
+              resolutions: resolutionLogs.map(log => ({
+                resolvedAt: log.createdAt,
+                resolution: (log.changes as any)?.resolution || "N/A"
+              }))
+            };
+          })
+        );
+        
+        // Count TAT extension requests by this POC
+        const pocExtensions = await db
+          .select()
+          .from(tatExtensions)
+          .where(eq(tatExtensions.requestedById, poc.id));
+        const totalTatExtensions = pocExtensions.length;
+        
+        // Count delayed responses (resolved after TAT deadline)
+        const delayedResponses = resolvedGaps.filter(gap => {
+          if (!gap.tatDeadline || !gap.resolvedAt) return false;
+          return new Date(gap.resolvedAt) > new Date(gap.tatDeadline);
+        });
+        const totalDelayed = delayedResponses.length;
+        
+        return {
+          poc: {
+            id: poc.id,
+            name: poc.name,
+            email: poc.email,
+            employeeId: poc.employeeId
+          },
+          metrics: {
+            totalAssigned,
+            totalResolved,
+            totalReopened,
+            reopenRate: totalResolved > 0 ? ((totalReopened / totalResolved) * 100).toFixed(2) : "0.00",
+            totalTatExtensions,
+            totalDelayed,
+            delayedRate: totalResolved > 0 ? ((totalDelayed / totalResolved) * 100).toFixed(2) : "0.00"
+          },
+          reopenHistory
+        };
+      })
+    );
+
+    return performanceData;
   }
 }
 
