@@ -32,10 +32,12 @@ const menuItems = {
   "QA/Ops": [
     { title: "My Submissions", url: "/qa", icon: ListChecks },
     { title: "Submit Gap", url: "/qa/new", icon: PlusCircle },
+    { title: "Reports", url: "/qa/reports", icon: BarChart3 },
   ],
   POC: [
     { title: "Assigned Gaps", url: "/poc", icon: ListChecks },
     { title: "My Performance", url: "/poc/performance", icon: BarChart3 },
+    { title: "Reports", url: "/poc/reports", icon: BarChart3 },
   ],
 };
 

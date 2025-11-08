@@ -18,6 +18,7 @@ import UserManagementPage from "@/pages/UserManagementPage";
 import FormBuilderPage from "@/pages/FormBuilderPage";
 import AdminSettingsPage from "@/pages/AdminSettingsPage";
 import AllGapsPage from "@/pages/AllGapsPage";
+import ReportsPage from "@/pages/ReportsPage";
 import NotFound from "@/pages/not-found";
 import type { PublicUser } from "@shared/schema";
 import { authApi } from "@/lib/api";
@@ -76,6 +77,22 @@ function Router({ user }: { user: PublicUser }) {
       
       <Route path="/management/form-builder">
         <ProtectedRoute user={user} allowedRoles={["Admin", "Management"]} component={FormBuilderPage} />
+      </Route>
+      
+      <Route path="/admin/reports">
+        <ProtectedRoute user={user} allowedRoles={["Admin", "Management", "POC", "QA/Ops"]} component={ReportsPage} />
+      </Route>
+      
+      <Route path="/management/reports">
+        <ProtectedRoute user={user} allowedRoles={["Admin", "Management", "POC", "QA/Ops"]} component={ReportsPage} />
+      </Route>
+      
+      <Route path="/poc/reports">
+        <ProtectedRoute user={user} allowedRoles={["Admin", "Management", "POC", "QA/Ops"]} component={ReportsPage} />
+      </Route>
+      
+      <Route path="/qa/reports">
+        <ProtectedRoute user={user} allowedRoles={["Admin", "Management", "POC", "QA/Ops"]} component={ReportsPage} />
       </Route>
       
       <Route path="/admin/gaps/:id" component={GapDetailPage} />
