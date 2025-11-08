@@ -100,14 +100,8 @@ export default function GapDetailPage() {
 
   // Fetch original gap if this is a duplicate
   const { data: originalGapData } = useQuery<{ gap: GapWithRelations }>({
-    queryKey: [`/api/gaps/${gap?.duplicateOfId}`],
-    enabled: !!gap?.duplicateOfId,
-  });
-
-  // Fetch audit logs to find who closed the gap
-  const { data: auditLogsData } = useQuery<{ logs: any[] }>({
-    queryKey: [`/api/audit-logs?limit=100`],
-    enabled: !!user && user.role === "Admin" && gap?.status === "Closed" && !!gap?.duplicateOfId,
+    queryKey: [`/api/gaps/${gapData?.gap?.duplicateOfId}`],
+    enabled: !!gapData?.gap?.duplicateOfId,
   });
 
   const addCommentMutation = useMutation({
