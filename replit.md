@@ -47,6 +47,7 @@ The system is built on a React 18 (TypeScript) frontend utilizing `shadcn/ui` fo
   - Real-time upload progress indicator with file size display
   - Automatic extraction and inclusion of attachments in gap submissions
   - Fixed "View Original Gap" navigation to use role-based routes
+  - **CRITICAL FIX**: Fixed `getAllGapAttachments` to include main gap attachments (was only checking resolution and comment attachments, causing download failures)
 - **Email Configuration**: Updated SendGrid FROM_EMAIL to `contactus@solvextra.com`
   - Enhanced logging for email sending debugging
   - Comprehensive error handling and delivery tracking

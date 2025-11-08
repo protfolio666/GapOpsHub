@@ -208,6 +208,18 @@ export class DatabaseStorage implements IStorage {
     const gap = await this.getGap(gapId);
     if (!gap) return allAttachments;
     
+    // Add main gap attachments (from form submissions)
+    if (gap.attachments && Array.isArray(gap.attachments)) {
+      gap.attachments.forEach((attachment: any) => {
+        allAttachments.push({
+          ...attachment,
+          source: 'gap',
+          sourceId: gap.id
+        });
+      });
+    }
+    
+    // Add resolution attachments
     if (gap.resolutionAttachments && Array.isArray(gap.resolutionAttachments)) {
       gap.resolutionAttachments.forEach((attachment: any) => {
         allAttachments.push({
@@ -218,6 +230,7 @@ export class DatabaseStorage implements IStorage {
       });
     }
     
+    // Add comment attachments
     const gapComments = await this.getCommentsByGap(gapId);
     gapComments.forEach(comment => {
       if (comment.attachments && Array.isArray(comment.attachments)) {
