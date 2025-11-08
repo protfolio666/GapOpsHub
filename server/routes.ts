@@ -1707,7 +1707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Return default settings if file doesn't exist
         return res.json({
           settings: {
-            openrouterModel: process.env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free",
+            openrouterModel: process.env.OPENROUTER_MODEL || "google/gemini-flash-1.5",
           }
         });
       }

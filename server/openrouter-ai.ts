@@ -2,8 +2,6 @@ import type { Gap } from "@shared/schema";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-// Custom model from environment variable, defaults to Google Gemini Flash (free tier)
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "google/gemini-flash-1.5";
 
 interface OpenRouterMessage {
   role: "system" | "user" | "assistant";
@@ -18,7 +16,15 @@ interface OpenRouterResponse {
   }>;
 }
 
-async function callOpenRouter(messages: OpenRouterMessage[], model = OPENROUTER_MODEL): Promise<string> {
+// Read model dynamically so Settings changes take effect immediately
+function getOpenRouterModel(): string {
+  return process.env.OPENROUTER_MODEL || "google/gemini-flash-1.5";
+}
+
+async function callOpenRouter(messages: OpenRouterMessage[], model?: string): Promise<string> {
+  const selectedModel = model || getOpenRouterModel();
+  console.log(`[OpenRouter AI] Using model: ${selectedModel}`);
+  
   if (!OPENROUTER_API_KEY) {
     throw new Error("OPENROUTER_API_KEY not configured");
   }
@@ -32,7 +38,7 @@ async function callOpenRouter(messages: OpenRouterMessage[], model = OPENROUTER_
       "X-Title": "GapOps Process Gap Intelligence",
     },
     body: JSON.stringify({
-      model,
+      model: selectedModel,
       messages,
     }),
   });
