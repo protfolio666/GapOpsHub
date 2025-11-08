@@ -383,7 +383,7 @@ export default function DynamicFormRenderer({ schema, onResponsesChange, initial
                       if (checked) {
                         newValues = [...currentValues, optValue];
                       } else {
-                        newValues = currentValues.filter(v => v !== optValue);
+                        newValues = currentValues.filter((v: string) => v !== optValue);
                       }
                       updateResponse(sectionId, question.id, newValues.join(','), instanceIndex);
                     }}
