@@ -182,6 +182,51 @@ export async function sendTATBreachWarning(
 }
 
 /**
+ * Send duplicate marking notification to reporter
+ */
+export async function sendGapMarkedAsDuplicateEmail(
+  reporterName: string,
+  reporterEmail: string,
+  gapId: string,
+  gapTitle: string,
+  originalGapId: string,
+  originalGapTitle: string
+): Promise<boolean> {
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2 style="color: #2563eb;">Gap Marked as Duplicate</h2>
+      <p>Hello ${reporterName},</p>
+      <p>Your reported gap has been reviewed and marked as a duplicate of an existing gap:</p>
+      
+      <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p><strong>Your Gap ID:</strong> ${gapId}</p>
+        <p><strong>Your Gap Title:</strong> ${gapTitle}</p>
+        <p style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #d1d5db;">
+          <strong>Original Gap ID:</strong> ${originalGapId}
+        </p>
+        <p><strong>Original Gap Title:</strong> ${originalGapTitle}</p>
+      </div>
+      
+      <p>Your gap will be closed and linked to the original gap. You can track progress on the original gap for updates.</p>
+      
+      <a href="https://gapops.replit.app" style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px;">
+        View Original Gap
+      </a>
+      
+      <p style="margin-top: 30px; color: #6b7280; font-size: 12px;">
+        This is an automated notification from GapOps. If you believe this is incorrect, please contact your management team.
+      </p>
+    </div>
+  `;
+
+  return sendEmail({
+    to: reporterEmail,
+    subject: `[GapOps] Gap Marked as Duplicate: ${gapTitle}`,
+    html,
+  });
+}
+
+/**
  * Send TAT extension request notification to management
  */
 export async function sendTATExtensionRequestEmail(

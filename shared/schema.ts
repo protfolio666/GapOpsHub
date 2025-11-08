@@ -47,6 +47,7 @@ export const gaps = pgTable("gaps", {
   sopSuggestions: jsonb("sop_suggestions"),
   resolutionSummary: text("resolution_summary"),
   resolutionAttachments: jsonb("resolution_attachments").default([]),
+  duplicateOfId: integer("duplicate_of_id").references(() => gaps.id),
 });
 
 export const insertGapSchema = createInsertSchema(gaps).omit({ 

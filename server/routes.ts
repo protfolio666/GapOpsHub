@@ -4,7 +4,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { storage } from "./storage";
 import { authenticateUser, createUser, hashPassword, requireAuth, requireRole, attachUser, sanitizeUser } from "./auth";
 import { findSimilarGapsWithAI, suggestSOPsWithAI } from "./openrouter-ai";
-import { sendGapAssignmentEmail, sendGapResolutionEmail, sendTATExtensionRequestEmail } from "./email-service";
+import { sendGapAssignmentEmail, sendGapResolutionEmail, sendTATExtensionRequestEmail, sendGapMarkedAsDuplicateEmail } from "./email-service";
 import { logGapCreation, logGapAssignment, logGapStatusChange, logUserLogin, logUserLogout } from "./audit-logger";
 import type { Gap } from "@shared/schema";
 import { z } from "zod";
@@ -937,6 +937,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Assign gap error:", error);
       return res.status(500).json({ message: "Failed to assign gap" });
+    }
+  });
+
+  app.post("/api/gaps/:id/mark-duplicate", requireRole("Management", "Admin"), async (req, res) => {
+    try {
+      const { duplicateOfId } = req.body;
+
+      if (!duplicateOfId) {
+        return res.status(400).json({ message: "Original gap ID is required" });
+      }
+
+      const gapId = Number(req.params.id);
+      const originalGapId = Number(duplicateOfId);
+
+      // Verify both gaps exist
+      const duplicateGap = await storage.getGap(gapId);
+      if (!duplicateGap) {
+        return res.status(404).json({ message: "Gap to mark as duplicate not found" });
+      }
+
+      const originalGap = await storage.getGap(originalGapId);
+      if (!originalGap) {
+        return res.status(404).json({ message: "Original gap not found" });
+      }
+
+      // Update the duplicate gap
+      const gap = await storage.updateGap(gapId, {
+        duplicateOfId: originalGapId,
+        status: "Closed",
+        closedAt: new Date(),
+      });
+
+      if (!gap) {
+        return res.status(404).json({ message: "Failed to update gap" });
+      }
+
+      // Log the duplicate marking
+      await storage.createAuditLog({
+        userId: req.session.userId!,
+        action: "gap_marked_duplicate",
+        entityType: "gap",
+        entityId: gapId,
+        ipAddress: req.ip || req.socket.remoteAddress || null,
+        userAgent: req.headers["user-agent"] || null,
+      });
+
+      // Send email notification to reporter
+      const reporter = await storage.getUser(duplicateGap.reporterId);
+      if (reporter) {
+        await sendGapMarkedAsDuplicateEmail(
+          reporter.name,
+          reporter.email,
+          duplicateGap.gapId,
+          duplicateGap.title,
+          originalGap.gapId,
+          originalGap.title
+        );
+      }
+
+      return res.json({ gap });
+    } catch (error) {
+      console.error("Mark as duplicate error:", error);
+      return res.status(500).json({ message: "Failed to mark gap as duplicate" });
     }
   });
 

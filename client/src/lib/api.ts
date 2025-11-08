@@ -88,6 +88,11 @@ export const gapApi = {
     return response as { gap: Gap };
   },
 
+  markAsDuplicate: async (id: number, duplicateOfId: number) => {
+    const response = await apiRequest("POST", `/api/gaps/${id}/mark-duplicate`, { duplicateOfId });
+    return response as { gap: Gap };
+  },
+
   getSimilar: async (id: number) => {
     const response = await apiRequest("GET", `/api/gaps/${id}/similar`);
     return response as { similarGaps: Array<{ gapId: number; similarGapId: number; similarityScore: number; gap: Gap }> };
