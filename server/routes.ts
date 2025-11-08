@@ -538,7 +538,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (department !== undefined) updates.department = department;
       if (employeeId !== undefined) updates.employeeId = employeeId;
       if (password !== undefined) {
-        const passwordHash = await bcrypt.hash(password, 10);
+        console.log(`[AUTH] Hashing new password for user ${userId}, password length: ${password.length}`);
+        const passwordHash = await hashPassword(password);
+        console.log(`[AUTH] Generated hash length: ${passwordHash.length}, starts with: ${passwordHash.substring(0, 7)}`);
         updates.passwordHash = passwordHash;
       }
 

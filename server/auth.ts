@@ -19,14 +19,33 @@ declare global {
 }
 
 export async function authenticateUser(email: string, password: string): Promise<User | null> {
-  const user = await storage.getUserByEmail(email);
-  
-  if (!user || !user.passwordHash) {
+  try {
+    const user = await storage.getUserByEmail(email);
+    
+    if (!user) {
+      console.log(`[AUTH] User not found for email: ${email}`);
+      return null;
+    }
+    
+    if (!user.passwordHash) {
+      console.log(`[AUTH] No password hash found for user: ${email}`);
+      return null;
+    }
+    
+    console.log(`[AUTH] Authenticating user: ${email}`);
+    console.log(`[AUTH] Password provided length: ${password.length}`);
+    console.log(`[AUTH] Hash length: ${user.passwordHash.length}`);
+    console.log(`[AUTH] Hash starts with: ${user.passwordHash.substring(0, 7)}`);
+    
+    const isValid = await bcrypt.compare(password, user.passwordHash);
+    
+    console.log(`[AUTH] Password valid: ${isValid}`);
+    
+    return isValid ? user : null;
+  } catch (error) {
+    console.error(`[AUTH] Authentication error for ${email}:`, error);
     return null;
   }
-  
-  const isValid = await bcrypt.compare(password, user.passwordHash);
-  return isValid ? user : null;
 }
 
 export async function hashPassword(password: string): Promise<string> {
