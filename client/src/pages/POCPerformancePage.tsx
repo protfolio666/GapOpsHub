@@ -180,7 +180,10 @@ export default function POCPerformancePage({ isAdmin = false }: { isAdmin?: bool
                       )}
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      {perf.metrics.totalDelayed} resolved after deadline
+                      {perf.metrics.totalDelayed} delayed or overdue
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      out of {perf.metrics.totalAssigned} assigned
                     </p>
                   </CardContent>
                 </Card>

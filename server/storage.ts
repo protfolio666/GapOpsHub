@@ -843,12 +843,28 @@ export class DatabaseStorage implements IStorage {
           .where(eq(tatExtensions.requestedById, poc.id));
         const totalTatExtensions = pocExtensions.length;
         
-        // Count delayed responses (resolved after TAT deadline)
-        const delayedResponses = resolvedGaps.filter(gap => {
+        // Count delayed responses (resolved after TAT deadline OR currently overdue)
+        const now = new Date();
+        const delayedResponses = allGaps.filter(gap => {
+          if (!gap.tatDeadline) return false;
+          
+          // If resolved, check if resolved after deadline
+          if (gap.resolvedAt) {
+            return new Date(gap.resolvedAt) > new Date(gap.tatDeadline);
+          }
+          
+          // If not resolved, check if currently overdue
+          const isOverdue = new Date(gap.tatDeadline) < now && 
+                           !["Resolved", "Closed"].includes(gap.status);
+          return isOverdue;
+        });
+        const totalDelayed = delayedResponses.length;
+        
+        // Count only resolved gaps that were delayed
+        const resolvedDelayed = resolvedGaps.filter(gap => {
           if (!gap.tatDeadline || !gap.resolvedAt) return false;
           return new Date(gap.resolvedAt) > new Date(gap.tatDeadline);
         });
-        const totalDelayed = delayedResponses.length;
         
         return {
           poc: {
@@ -864,7 +880,9 @@ export class DatabaseStorage implements IStorage {
             reopenRate: totalResolved > 0 ? ((totalReopened / totalResolved) * 100).toFixed(2) : "0.00",
             totalTatExtensions,
             totalDelayed,
-            delayedRate: totalResolved > 0 ? ((totalDelayed / totalResolved) * 100).toFixed(2) : "0.00"
+            // Calculate delayed rate based on total assigned (to show live performance)
+            delayedRate: totalAssigned > 0 ? ((totalDelayed / totalAssigned) * 100).toFixed(2) : "0.00",
+            resolvedDelayed: resolvedDelayed.length
           },
           reopenHistory
         };
