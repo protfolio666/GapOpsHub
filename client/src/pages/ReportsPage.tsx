@@ -52,14 +52,18 @@ export default function ReportsPage() {
   const [selectedTemplateForExport, setSelectedTemplateForExport] = useState<number | undefined>();
 
   // Fetch all users for filter dropdowns
-  const { data: allUsers } = useQuery<User[]>({
+  const { data: usersData } = useQuery<{ users: User[] }>({
     queryKey: ["/api/users"],
   });
+  
+  const allUsers = usersData?.users || [];
 
   // Fetch all templates for filter dropdowns
-  const { data: templates } = useQuery<FormTemplate[]>({
+  const { data: templatesData } = useQuery<{ templates: FormTemplate[] }>({
     queryKey: ["/api/form-templates"],
   });
+  
+  const templates = templatesData?.templates || [];
 
   // Fetch filtered gaps
   const { data: reportData, isLoading, refetch } = useQuery<{ gaps: GapWithRelations[]; total: number }>({
