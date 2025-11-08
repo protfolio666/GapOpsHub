@@ -342,14 +342,16 @@ export default function GapDetailPage() {
     gap.closedAt && { title: "Closed", timestamp: new Date(gap.closedAt), completed: true },
   ].filter(Boolean).sort((a: any, b: any) => a.timestamp.getTime() - b.timestamp.getTime()) as Array<{ title: string; timestamp: Date; completed: boolean }>;
 
-  const attachments = Array.isArray(gap.attachments) ? gap.attachments as string[] : [];
+  // Keep attachments as objects (not strings) so download paths work
+  const attachments = Array.isArray(gap.attachments) ? gap.attachments : [];
 
   const comments = (commentsData?.comments || []).map((c) => ({
     id: String(c.id),
     author: c.author?.name || "Unknown",
     content: c.content,
     createdAt: new Date(c.createdAt),
-    attachments: Array.isArray(c.attachments) ? c.attachments as string[] : [],
+    // Keep attachments as objects (not strings) so download paths work
+    attachments: Array.isArray(c.attachments) ? c.attachments : [],
   }));
 
   return (
