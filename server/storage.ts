@@ -9,7 +9,7 @@ import {
   type SimilarGap, type InsertSimilarGap, type AuditLog, type InsertAuditLog,
   type GapPoc, type InsertGapPoc, type PublicUser
 } from "@shared/schema";
-import { eq, desc, and, sql, or } from "drizzle-orm";
+import { eq, desc, and, sql, or, inArray } from "drizzle-orm";
 
 export interface IStorage {
   // User operations
