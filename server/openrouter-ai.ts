@@ -101,16 +101,24 @@ Return ONLY the similarity score (0-100):`
  * Uses parallel processing with concurrency limit to avoid overwhelming the API
  */
 export async function findSimilarGapsWithAI(targetGap: Gap, allGaps: Gap[], threshold = 60): Promise<Array<{ gap: Gap; score: number }>> {
+  console.log(`[AI] Finding similar gaps for gap ${targetGap.id} (${targetGap.gapId}) - comparing against ${allGaps.length} gaps`);
+  
   // Filter out the target gap
   const gapsToCompare = allGaps.filter(gap => gap.id !== targetGap.id);
+  
+  if (gapsToCompare.length === 0) {
+    console.log(`[AI] No other gaps to compare against for gap ${targetGap.id}`);
+    return [];
+  }
   
   // Process all similarity calculations in parallel with Promise.all
   const similarityPromises = gapsToCompare.map(async (gap) => {
     try {
       const score = await calculateAISimilarity(targetGap, gap);
+      console.log(`[AI] Similarity between ${targetGap.gapId} and ${gap.gapId}: ${score}%`);
       return { gap, score };
     } catch (error) {
-      console.error(`Failed to calculate similarity for gap ${gap.id}:`, error);
+      console.error(`[AI ERROR] Failed to calculate similarity for gap ${gap.id}:`, error);
       return { gap, score: 0 }; // Return 0 on error
     }
   });
@@ -119,9 +127,12 @@ export async function findSimilarGapsWithAI(targetGap: Gap, allGaps: Gap[], thre
   const allResults = await Promise.all(similarityPromises);
   
   // Filter by threshold and sort by score (highest first)
-  return allResults
+  const similarGaps = allResults
     .filter(result => result.score >= threshold)
     .sort((a, b) => b.score - a.score);
+  
+  console.log(`[AI] Found ${similarGaps.length} similar gaps above ${threshold}% threshold`);
+  return similarGaps;
 }
 
 /**
