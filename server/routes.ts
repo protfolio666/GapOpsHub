@@ -1252,20 +1252,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only the reporter, assignee, QA/Ops, or Management can reopen this gap" });
       }
 
+      // Save current resolution to history if it exists
+      if (existingGap.resolutionSummary && existingGap.resolvedAt) {
+        await storage.createResolutionHistory({
+          gapId: existingGap.id,
+          resolutionSummary: existingGap.resolutionSummary,
+          resolutionAttachments: existingGap.resolutionAttachments || [],
+          resolvedById: existingGap.updatedById || existingGap.assignedToId || existingGap.reporterId,
+          resolvedAt: existingGap.resolvedAt,
+          reopenedById: req.session.userId!,
+          reopenedAt: new Date(),
+        });
+      }
+
+      // Clear resolution fields and update status to Reopened
       const gap = await storage.updateGap(Number(req.params.id), {
         status: "Reopened",
         reopenedAt: new Date(),
         reopenedById: req.session.userId!,
+        resolutionSummary: null,
+        resolutionAttachments: [],
+        resolvedAt: null,
+        updatedById: req.session.userId!,
       });
 
       if (!gap) {
         return res.status(404).json({ message: "Gap not found" });
       }
 
+      // Log audit event
+      await storage.createAuditLog({
+        userId: user.id,
+        action: "gap_reopened",
+        entityType: "gap",
+        entityId: gap.id,
+        changes: { status: "Reopened", reopenedBy: user.name },
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+
       return res.json({ gap });
     } catch (error) {
       console.error("Reopen gap error:", error);
       return res.status(500).json({ message: "Failed to reopen gap" });
+    }
+  });
+
+  app.get("/api/gaps/:id/resolution-history", requireAuth, async (req, res) => {
+    try {
+      const gapId = Number(req.params.id);
+      
+      // Verify gap exists
+      const gap = await storage.getGap(gapId);
+      if (!gap) {
+        return res.status(404).json({ message: "Gap not found" });
+      }
+
+      const history = await storage.getResolutionHistory(gapId);
+      
+      // Get resolver details for each history entry
+      const detailedHistory = await Promise.all(
+        history.map(async (entry) => {
+          const resolver = await storage.getUser(entry.resolvedById);
+          const reopener = entry.reopenedById ? await storage.getUser(entry.reopenedById) : null;
+          return {
+            ...entry,
+            resolver: resolver ? { id: resolver.id, name: resolver.name, email: resolver.email } : null,
+            reopener: reopener ? { id: reopener.id, name: reopener.name, email: reopener.email } : null,
+          };
+        })
+      );
+
+      return res.json({ history: detailedHistory });
+    } catch (error) {
+      console.error("Get resolution history error:", error);
+      return res.status(500).json({ message: "Failed to get resolution history" });
     }
   });
 

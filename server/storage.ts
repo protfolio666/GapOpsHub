@@ -1,13 +1,13 @@
 import { db } from "./db";
 import { 
   users, gaps, comments, sops, formTemplates, formFields, 
-  gapAssignments, tatExtensions, similarGaps, auditLogs, gapPocs,
+  gapAssignments, tatExtensions, similarGaps, auditLogs, gapPocs, resolutionHistory,
   type User, type InsertUser, type Gap, type InsertGap,
   type Comment, type InsertComment, type Sop, type InsertSop,
   type FormTemplate, type InsertFormTemplate, type FormField, type InsertFormField,
   type GapAssignment, type InsertGapAssignment, type TatExtension, type InsertTatExtension,
   type SimilarGap, type InsertSimilarGap, type AuditLog, type InsertAuditLog,
-  type GapPoc, type InsertGapPoc, type PublicUser
+  type GapPoc, type InsertGapPoc, type PublicUser, type ResolutionHistory, type InsertResolutionHistory
 } from "@shared/schema";
 import { eq, desc, and, sql, or, inArray } from "drizzle-orm";
 
@@ -45,6 +45,10 @@ export interface IStorage {
     templateIds?: number[];
     statuses?: string[];
   }): Promise<Gap[]>;
+  
+  // Resolution History operations
+  getResolutionHistory(gapId: number): Promise<ResolutionHistory[]>;
+  createResolutionHistory(history: InsertResolutionHistory): Promise<ResolutionHistory>;
   
   // Comment operations
   getComment(id: number): Promise<Comment | undefined>;
@@ -411,6 +415,26 @@ export class DatabaseStorage implements IStorage {
   async deleteComment(id: number): Promise<boolean> {
     const result = await db.delete(comments).where(eq(comments.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Resolution History operations
+  async getResolutionHistory(gapId: number): Promise<ResolutionHistory[]> {
+    return await db
+      .select()
+      .from(resolutionHistory)
+      .where(eq(resolutionHistory.gapId, gapId))
+      .orderBy(desc(resolutionHistory.resolvedAt));
+  }
+
+  async createResolutionHistory(history: InsertResolutionHistory): Promise<ResolutionHistory> {
+    const [newHistory] = await db
+      .insert(resolutionHistory)
+      .values({
+        ...history,
+        resolutionAttachments: history.resolutionAttachments as any,
+      } as any)
+      .returning();
+    return newHistory;
   }
 
   // SOP operations

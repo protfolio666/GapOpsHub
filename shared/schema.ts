@@ -1,4 +1,4 @@
-import { pgTable, text, integer, boolean, timestamp, serial, varchar, jsonb, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, boolean, timestamp, serial, varchar, jsonb, unique, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -192,6 +192,27 @@ export const insertTatExtensionSchema = createInsertSchema(tatExtensions).omit({
 });
 export type InsertTatExtension = z.infer<typeof insertTatExtensionSchema>;
 export type TatExtension = typeof tatExtensions.$inferSelect;
+
+export const resolutionHistory = pgTable("resolution_history", {
+  id: serial("id").primaryKey(),
+  gapId: integer("gap_id").references(() => gaps.id, { onDelete: "cascade" }).notNull(),
+  resolutionSummary: text("resolution_summary").notNull(),
+  resolutionAttachments: jsonb("resolution_attachments").default([]),
+  resolvedById: integer("resolved_by_id").references(() => users.id).notNull(),
+  resolvedAt: timestamp("resolved_at").notNull(),
+  reopenedById: integer("reopened_by_id").references(() => users.id),
+  reopenedAt: timestamp("reopened_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => ({
+  gapIdResolvedAtIdx: index("resolution_history_gap_id_resolved_at_idx").on(table.gapId, table.resolvedAt),
+}));
+
+export const insertResolutionHistorySchema = createInsertSchema(resolutionHistory).omit({ 
+  id: true, 
+  createdAt: true 
+});
+export type InsertResolutionHistory = z.infer<typeof insertResolutionHistorySchema>;
+export type ResolutionHistory = typeof resolutionHistory.$inferSelect;
 
 export const similarGaps = pgTable("similar_gaps", {
   id: serial("id").primaryKey(),
