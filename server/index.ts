@@ -1,7 +1,7 @@
 import express, { type Request, Response, NextFunction } from "express";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
-import { Pool } from "@neondatabase/serverless";
+import { pool } from "./db";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
@@ -18,7 +18,7 @@ if (!process.env.SESSION_SECRET) {
 const PgSession = connectPgSimple(session);
 const sessionStore = process.env.NODE_ENV === "production" && process.env.DATABASE_URL
   ? new PgSession({
-      pool: new Pool({ connectionString: process.env.DATABASE_URL }),
+      pool: pool as any,
       tableName: 'session',
       createTableIfMissing: true,
     })
