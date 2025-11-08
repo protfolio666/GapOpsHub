@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Info, Loader2 } from "lucide-react";
 import logoUrl from "@assets/IMG_3463-removebg-preview_1762617433762.png";
+import puzzleIllustration from "@assets/stock_images/colorful_puzzle_piec_f5f048ad.jpg";
 
 interface LoginPageProps {
   onLogin: (email: string, password: string) => void;
@@ -29,146 +30,109 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   };
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex bg-white dark:bg-background">
       {/* Left Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-background animate-in fade-in slide-in-from-left duration-700">
-        <div className="w-full max-w-md space-y-8">
-          {/* Logo and Title */}
-          <div className="text-center space-y-4 animate-in fade-in slide-in-from-top duration-500">
-            <div className="flex justify-center">
-              <img 
-                src={logoUrl} 
-                alt="SolvExtra GO Logo" 
-                className="h-24 w-24 object-contain animate-in zoom-in duration-700"
-              />
+      <div className="w-full lg:w-1/2 flex flex-col justify-center px-12 lg:px-20 bg-white dark:bg-background">
+        {/* Logo and Title */}
+        <div className="mb-12">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="h-10 w-10 rounded-lg bg-red-500 flex items-center justify-center">
+              <span className="text-white font-bold text-xl">S</span>
             </div>
-            <div className="space-y-2">
-              <h1 className="text-4xl font-bold tracking-tight bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent">
-                SolvExtra GO
-              </h1>
-              <p className="text-lg text-muted-foreground">
-                Welcome back!
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Please enter your credentials to log in
-              </p>
-            </div>
+            <h1 className="text-2xl font-bold text-foreground">
+              SolvExtra GO
+            </h1>
           </div>
+          
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold text-foreground">
+              Welcome back!
+            </h2>
+            <p className="text-muted-foreground">
+              Please enter your credentials to log in
+            </p>
+          </div>
+        </div>
 
-          {/* Login Form */}
-          <Card className="border-none shadow-xl animate-in fade-in slide-in-from-bottom duration-700" data-testid="card-login">
-            <CardContent className="pt-6">
-              <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-sm font-medium">
-                    Email Address
-                  </Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="your.name@company.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={isLoading}
-                    className="h-11 transition-all duration-200 focus:ring-2 focus:ring-primary"
-                    data-testid="input-email"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-sm font-medium">
-                    Password
-                  </Label>
-                  <Input
-                    id="password"
-                    type="password"
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    disabled={isLoading}
-                    className="h-11 transition-all duration-200 focus:ring-2 focus:ring-primary"
-                    data-testid="input-password"
-                  />
-                </div>
-                <Button 
-                  type="submit" 
-                  className="w-full h-11 text-base font-medium transition-all duration-200 hover:scale-[1.02] active:scale-[0.98]" 
-                  disabled={isLoading}
-                  data-testid="button-login"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
-                    </>
-                  ) : (
-                    "Sign In"
-                  )}
-                </Button>
-              </form>
-              
-              <Alert className="mt-6 bg-muted/50 border-muted-foreground/20 animate-in fade-in duration-1000">
-                <Info className="h-4 w-4" />
-                <AlertDescription className="text-sm">
-                  <strong className="font-medium">Demo Credentials:</strong>
-                  <div className="mt-2 space-y-1 font-mono text-xs">
-                    <div>admin@gapops.com</div>
-                    <div>manager@gapops.com</div>
-                    <div>qa@gapops.com</div>
-                    <div>poc@gapops.com</div>
-                    <div className="mt-1 text-muted-foreground">Password: <span className="font-mono">Password123!</span></div>
-                  </div>
-                </AlertDescription>
-              </Alert>
-            </CardContent>
-          </Card>
+        {/* Login Form */}
+        <form onSubmit={handleSubmit} className="space-y-6 max-w-md">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm font-medium text-foreground">
+              Email Address
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="your.email@company.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              disabled={isLoading}
+              className="h-12 border-border bg-background"
+              data-testid="input-email"
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-sm font-medium text-foreground">
+              Password
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              disabled={isLoading}
+              className="h-12 border-border bg-background"
+              data-testid="input-password"
+            />
+          </div>
+          
+          <Button 
+            type="submit" 
+            className="w-full h-12 text-base font-medium" 
+            disabled={isLoading}
+            data-testid="button-login"
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              "Sign In"
+            )}
+          </Button>
+        </form>
 
-          {/* Footer */}
-          <p className="text-center text-sm text-muted-foreground animate-in fade-in duration-1000">
-            Process Gap Intelligence & Resolution Hub
-          </p>
+        {/* Demo Credentials Info */}
+        <div className="mt-8 max-w-md">
+          <Alert className="bg-muted/50 border-muted-foreground/20">
+            <Info className="h-4 w-4" />
+            <AlertDescription className="text-sm">
+              <strong className="font-medium">Demo Credentials:</strong>
+              <div className="mt-2 space-y-1 font-mono text-xs">
+                <div>admin@gapops.com</div>
+                <div>manager@gapops.com</div>
+                <div>qa@gapops.com</div>
+                <div>poc@gapops.com</div>
+                <div className="mt-1 text-muted-foreground">Password: Password123!</div>
+              </div>
+            </AlertDescription>
+          </Alert>
         </div>
       </div>
 
-      {/* Right Side - Hero Image/Illustration */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/10 via-blue-500/5 to-background items-center justify-center p-12 animate-in fade-in slide-in-from-right duration-700">
-        <div className="max-w-xl space-y-6 text-center">
-          <div className="space-y-4">
-            <div className="inline-flex p-4 bg-primary/10 rounded-2xl">
-              <img 
-                src={logoUrl} 
-                alt="SolvExtra GO" 
-                className="h-32 w-32 object-contain animate-in zoom-in duration-1000 delay-300"
-              />
-            </div>
-            <h2 className="text-4xl font-bold tracking-tight animate-in slide-in-from-bottom duration-700 delay-200">
-              Streamline Your Operations
-            </h2>
-            <p className="text-lg text-muted-foreground animate-in slide-in-from-bottom duration-700 delay-300">
-              Identify, track, and resolve process gaps with AI-powered intelligence. 
-              Enhance efficiency and ensure compliance across your organization.
-            </p>
-          </div>
-          
-          <div className="grid grid-cols-2 gap-4 pt-8 animate-in fade-in duration-1000 delay-500">
-            <div className="p-4 bg-card rounded-lg border shadow-sm hover-elevate transition-all duration-300">
-              <div className="text-3xl font-bold text-primary">AI-Powered</div>
-              <div className="text-sm text-muted-foreground mt-1">Smart Gap Detection</div>
-            </div>
-            <div className="p-4 bg-card rounded-lg border shadow-sm hover-elevate transition-all duration-300">
-              <div className="text-3xl font-bold text-primary">Real-Time</div>
-              <div className="text-sm text-muted-foreground mt-1">Live Collaboration</div>
-            </div>
-            <div className="p-4 bg-card rounded-lg border shadow-sm hover-elevate transition-all duration-300">
-              <div className="text-3xl font-bold text-primary">Complete</div>
-              <div className="text-sm text-muted-foreground mt-1">Full Audit Trail</div>
-            </div>
-            <div className="p-4 bg-card rounded-lg border shadow-sm hover-elevate transition-all duration-300">
-              <div className="text-3xl font-bold text-primary">RBAC</div>
-              <div className="text-sm text-muted-foreground mt-1">Role-Based Access</div>
-            </div>
-          </div>
+      {/* Right Side - Illustration */}
+      <div className="hidden lg:flex lg:w-1/2 bg-white dark:bg-card items-center justify-center p-16 relative">
+        <div className="w-full h-full flex items-center justify-center">
+          <img 
+            src={puzzleIllustration} 
+            alt="Team Collaboration - Puzzle Pieces" 
+            className="w-full h-auto max-w-2xl object-contain"
+          />
         </div>
       </div>
     </div>
