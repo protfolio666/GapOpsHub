@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { FileText, AlertCircle, CheckCircle, Clock } from "lucide-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { queryClient } from "@/lib/queryClient";
@@ -18,6 +18,8 @@ import { queryClient } from "@/lib/queryClient";
 export default function ManagementDashboard() {
   const [selectedGap, setSelectedGap] = useState<number | null>(null);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [duplicateDialogOpen, setDuplicateDialogOpen] = useState(false);
+  const [selectedOriginalGapId, setSelectedOriginalGapId] = useState<string>("");
   const [assignData, setAssignData] = useState({
     assignedToId: "",
     priority: "High",
@@ -71,12 +73,43 @@ export default function ManagementDashboard() {
     },
   });
 
+  const markAsDuplicateMutation = useMutation({
+    mutationFn: (data: { gapId: number; duplicateOfId: number }) =>
+      gapApi.markAsDuplicate(data.gapId, data.duplicateOfId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/gaps"] });
+      setDuplicateDialogOpen(false);
+      setSelectedGap(null);
+      setSelectedOriginalGapId("");
+      toast({
+        title: "Gap Marked as Duplicate",
+        description: "The gap has been marked as a duplicate and closed.",
+      });
+    },
+    onError: () => {
+      toast({
+        variant: "destructive",
+        title: "Failed to Mark as Duplicate",
+        description: "Unable to mark the gap as duplicate. Please try again.",
+      });
+    },
+  });
+
   const handleAssignGap = () => {
     if (selectedGap && assignData.assignedToId && assignData.tatDeadline) {
       assignGapMutation.mutate({
         gapId: selectedGap,
         assignedToId: Number(assignData.assignedToId),
         tatDeadline: assignData.tatDeadline,
+      });
+    }
+  };
+
+  const handleMarkAsDuplicate = () => {
+    if (selectedGap && selectedOriginalGapId) {
+      markAsDuplicateMutation.mutate({
+        gapId: selectedGap,
+        duplicateOfId: Number(selectedOriginalGapId),
       });
     }
   };
@@ -211,9 +244,59 @@ export default function ManagementDashboard() {
                               </div>
                             </DialogContent>
                           </Dialog>
-                          <Button variant="outline" className="w-full" data-testid="button-mark-duplicate">
-                            Mark as Duplicate
-                          </Button>
+                          <Dialog open={duplicateDialogOpen} onOpenChange={setDuplicateDialogOpen}>
+                            <DialogTrigger asChild>
+                              <Button variant="outline" className="w-full" data-testid="button-mark-duplicate">
+                                Mark as Duplicate
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent data-testid="dialog-mark-duplicate">
+                              <DialogHeader>
+                                <DialogTitle>Mark as Duplicate</DialogTitle>
+                                <DialogDescription>
+                                  Select the original gap that this submission duplicates. The duplicate gap will be closed and linked to the original.
+                                </DialogDescription>
+                              </DialogHeader>
+                              <div className="space-y-4">
+                                <div>
+                                  <Label>Select Original Gap</Label>
+                                  <Select value={selectedOriginalGapId} onValueChange={setSelectedOriginalGapId}>
+                                    <SelectTrigger data-testid="select-original-gap">
+                                      <SelectValue placeholder="Choose original gap" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      {similarGaps.map((sg) => (
+                                        <SelectItem key={sg.gap?.id} value={sg.gap?.id?.toString() || ""}>
+                                          {sg.gap?.gapId} - {sg.gap?.title} ({Math.round(sg.similarityScore * 100)}% similar)
+                                        </SelectItem>
+                                      ))}
+                                    </SelectContent>
+                                  </Select>
+                                  {similarGaps.length === 0 && (
+                                    <p className="text-sm text-muted-foreground mt-2">
+                                      No similar gaps found. You can still mark as duplicate by entering a gap ID manually.
+                                    </p>
+                                  )}
+                                </div>
+                                <DialogFooter>
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => setDuplicateDialogOpen(false)}
+                                    data-testid="button-cancel-duplicate"
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button
+                                    onClick={handleMarkAsDuplicate}
+                                    disabled={!selectedOriginalGapId || markAsDuplicateMutation.isPending}
+                                    data-testid="button-confirm-duplicate"
+                                  >
+                                    {markAsDuplicateMutation.isPending ? "Marking..." : "Mark as Duplicate"}
+                                  </Button>
+                                </DialogFooter>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
                         </div>
                       </div>
                     )}
