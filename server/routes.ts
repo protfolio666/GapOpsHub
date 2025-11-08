@@ -6,6 +6,7 @@ import { authenticateUser, createUser, hashPassword, requireAuth, requireRole, a
 import { findSimilarGapsWithAI, suggestSOPsWithAI } from "./openrouter-ai";
 import { sendGapAssignmentEmail, sendGapResolutionEmail, sendTATExtensionRequestEmail, sendGapMarkedAsDuplicateEmail } from "./email-service";
 import { logGapCreation, logGapAssignment, logGapStatusChange, logUserLogin, logUserLogout } from "./audit-logger";
+import { generateExcelReport, type GapWithRelations } from "./excel-export";
 import type { Gap } from "@shared/schema";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
@@ -1837,6 +1838,160 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Get dashboard metrics error:", error);
       return res.status(500).json({ message: "Failed to get metrics" });
+    }
+  });
+
+  // ==================== REPORTS ====================
+  
+  // Get filtered gaps for reports with RBAC
+  app.get("/api/reports/gaps", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Parse filters from query params
+      const filters: any = {};
+      
+      if (req.query.dateFrom) filters.dateFrom = new Date(req.query.dateFrom as string);
+      if (req.query.dateTo) filters.dateTo = new Date(req.query.dateTo as string);
+      if (req.query.templateIds) filters.templateIds = (req.query.templateIds as string).split(',').map(Number);
+      if (req.query.statuses) filters.statuses = (req.query.statuses as string).split(',');
+      if (req.query.departments) filters.departments = (req.query.departments as string).split(',');
+      if (req.query.userIds) filters.userIds = (req.query.userIds as string).split(',').map(Number);
+      if (req.query.roles) filters.roles = (req.query.roles as string).split(',');
+      if (req.query.employeeIds) filters.employeeIds = (req.query.employeeIds as string).split(',');
+      if (req.query.emails) filters.emails = (req.query.emails as string).split(',');
+
+      // Get filtered gaps
+      let gaps = await storage.getFilteredGaps(filters);
+
+      // Apply RBAC filtering
+      if (user.role === "QA/Ops") {
+        // QA/Ops can only see gaps they reported
+        gaps = gaps.filter(g => g.reporterId === user.id);
+      } else if (user.role === "POC") {
+        // POC can only see gaps assigned to them
+        const pocGapIds = new Set<number>();
+        
+        // Get gaps where user is primary assignee
+        const assignedGaps = gaps.filter(g => g.assignedToId === user.id);
+        assignedGaps.forEach(g => pocGapIds.add(g.id));
+        
+        // Get gaps where user is in POC list
+        for (const gap of gaps) {
+          const pocs = await storage.getGapPocs(gap.id);
+          if (pocs.some(p => p.userId === user.id)) {
+            pocGapIds.add(gap.id);
+          }
+        }
+        
+        gaps = gaps.filter(g => pocGapIds.has(g.id));
+      }
+      // Admin and Management can see all gaps
+
+      // Enrich gaps with user and template info
+      const enrichedGaps: GapWithRelations[] = await Promise.all(
+        gaps.map(async (gap) => {
+          const reporter = gap.reporterId ? await storage.getUser(gap.reporterId) : undefined;
+          const assignee = gap.assignedToId ? await storage.getUser(gap.assignedToId) : undefined;
+          const template = gap.formTemplateId ? await storage.getFormTemplate(gap.formTemplateId) : undefined;
+
+          return {
+            ...gap,
+            reporter,
+            assignee,
+            template,
+          };
+        })
+      );
+
+      return res.json({ gaps: enrichedGaps, total: enrichedGaps.length });
+    } catch (error) {
+      console.error("Get reports error:", error);
+      return res.status(500).json({ message: "Failed to get reports" });
+    }
+  });
+
+  // Export gaps to Excel with RBAC
+  app.get("/api/reports/export", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Parse filters (same as above)
+      const filters: any = {};
+      
+      if (req.query.dateFrom) filters.dateFrom = new Date(req.query.dateFrom as string);
+      if (req.query.dateTo) filters.dateTo = new Date(req.query.dateTo as string);
+      if (req.query.templateIds) filters.templateIds = (req.query.templateIds as string).split(',').map(Number);
+      if (req.query.statuses) filters.statuses = (req.query.statuses as string).split(',');
+      if (req.query.departments) filters.departments = (req.query.departments as string).split(',');
+      if (req.query.userIds) filters.userIds = (req.query.userIds as string).split(',').map(Number);
+      if (req.query.roles) filters.roles = (req.query.roles as string).split(',');
+      if (req.query.employeeIds) filters.employeeIds = (req.query.employeeIds as string).split(',');
+      if (req.query.emails) filters.emails = (req.query.emails as string).split(',');
+
+      const templateId = req.query.templateId ? Number(req.query.templateId) : undefined;
+
+      // Get filtered gaps
+      let gaps = await storage.getFilteredGaps(filters);
+
+      // Apply RBAC filtering
+      if (user.role === "QA/Ops") {
+        gaps = gaps.filter(g => g.reporterId === user.id);
+      } else if (user.role === "POC") {
+        const pocGapIds = new Set<number>();
+        
+        const assignedGaps = gaps.filter(g => g.assignedToId === user.id);
+        assignedGaps.forEach(g => pocGapIds.add(g.id));
+        
+        for (const gap of gaps) {
+          const pocs = await storage.getGapPocs(gap.id);
+          if (pocs.some(p => p.userId === user.id)) {
+            pocGapIds.add(gap.id);
+          }
+        }
+        
+        gaps = gaps.filter(g => pocGapIds.has(g.id));
+      }
+
+      // Enrich gaps with relations
+      const enrichedGaps: GapWithRelations[] = await Promise.all(
+        gaps.map(async (gap) => {
+          const reporter = gap.reporterId ? await storage.getUser(gap.reporterId) : undefined;
+          const assignee = gap.assignedToId ? await storage.getUser(gap.assignedToId) : undefined;
+          const template = gap.formTemplateId ? await storage.getFormTemplate(gap.formTemplateId) : undefined;
+
+          return {
+            ...gap,
+            reporter,
+            assignee,
+            template,
+          };
+        })
+      );
+
+      // Get template if specified
+      const template = templateId ? await storage.getFormTemplate(templateId) : undefined;
+
+      // Generate Excel file
+      const excelBuffer = generateExcelReport(enrichedGaps, template);
+
+      // Set headers for file download
+      const filename = template
+        ? `${template.name.replace(/\s+/g, '_')}_Report_${new Date().toISOString().split('T')[0]}.xlsx`
+        : `GapOps_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+
+      res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.send(excelBuffer);
+    } catch (error) {
+      console.error("Export reports error:", error);
+      return res.status(500).json({ message: "Failed to export reports" });
     }
   });
 

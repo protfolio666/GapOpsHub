@@ -34,6 +34,17 @@ export interface IStorage {
   deleteGap(id: number): Promise<boolean>;
   resolveGap(id: number, resolutionSummary: string, resolutionAttachments: any[]): Promise<Gap | undefined>;
   getAllGapAttachments(gapId: number): Promise<any[]>;
+  getFilteredGaps(filters: {
+    dateFrom?: Date;
+    dateTo?: Date;
+    userIds?: number[];
+    roles?: string[];
+    departments?: string[];
+    employeeIds?: string[];
+    emails?: string[];
+    templateIds?: number[];
+    statuses?: string[];
+  }): Promise<Gap[]>;
   
   // Comment operations
   getComment(id: number): Promise<Comment | undefined>;
@@ -246,6 +257,103 @@ export class DatabaseStorage implements IStorage {
     });
     
     return allAttachments;
+  }
+
+  async getFilteredGaps(filters: {
+    dateFrom?: Date;
+    dateTo?: Date;
+    userIds?: number[];
+    roles?: string[];
+    departments?: string[];
+    employeeIds?: string[];
+    emails?: string[];
+    templateIds?: number[];
+    statuses?: string[];
+  }): Promise<Gap[]> {
+    const conditions = [];
+    
+    // Date range filter
+    if (filters.dateFrom) {
+      conditions.push(sql`${gaps.createdAt} >= ${filters.dateFrom}`);
+    }
+    if (filters.dateTo) {
+      conditions.push(sql`${gaps.createdAt} <= ${filters.dateTo}`);
+    }
+    
+    // Template filter
+    if (filters.templateIds && filters.templateIds.length > 0) {
+      conditions.push(sql`${gaps.formTemplateId} = ANY(${filters.templateIds})`);
+    }
+    
+    // Status filter
+    if (filters.statuses && filters.statuses.length > 0) {
+      conditions.push(sql`${gaps.status} = ANY(${filters.statuses})`);
+    }
+    
+    // Department filter
+    if (filters.departments && filters.departments.length > 0) {
+      conditions.push(sql`${gaps.department} = ANY(${filters.departments})`);
+    }
+    
+    // User-based filters (reporter or assignee)
+    if (filters.userIds && filters.userIds.length > 0) {
+      conditions.push(
+        or(
+          sql`${gaps.reporterId} = ANY(${filters.userIds})`,
+          sql`${gaps.assignedToId} = ANY(${filters.userIds})`
+        )
+      );
+    }
+    
+    // If we have role/employeeId/email filters, we need to join with users table
+    let query;
+    if (filters.roles?.length || filters.employeeIds?.length || filters.emails?.length) {
+      const userConditions = [];
+      
+      if (filters.roles && filters.roles.length > 0) {
+        userConditions.push(sql`${users.role} = ANY(${filters.roles})`);
+      }
+      if (filters.employeeIds && filters.employeeIds.length > 0) {
+        userConditions.push(sql`${users.employeeId} = ANY(${filters.employeeIds})`);
+      }
+      if (filters.emails && filters.emails.length > 0) {
+        userConditions.push(sql`${users.email} = ANY(${filters.emails})`);
+      }
+      
+      // Get user IDs matching these criteria
+      const matchingUsers = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(and(...userConditions));
+      
+      const matchingUserIds = matchingUsers.map(u => u.id);
+      
+      if (matchingUserIds.length > 0) {
+        conditions.push(
+          or(
+            sql`${gaps.reporterId} = ANY(${matchingUserIds})`,
+            sql`${gaps.assignedToId} = ANY(${matchingUserIds})`
+          )
+        );
+      } else {
+        // No matching users found, return empty array
+        return [];
+      }
+    }
+    
+    // Build final query
+    if (conditions.length > 0) {
+      return await db
+        .select()
+        .from(gaps)
+        .where(and(...conditions))
+        .orderBy(desc(gaps.createdAt));
+    } else {
+      return await db
+        .select()
+        .from(gaps)
+        .orderBy(desc(gaps.createdAt));
+    }
   }
 
   // Comment operations
