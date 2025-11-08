@@ -72,6 +72,13 @@ export default function GapDetailPage() {
   const gapId = params?.id;
   const { toast } = useToast();
   const [socket, setSocket] = useState<Socket | null>(null);
+  
+  // Helper function to check if current user is any POC on this gap (primary or secondary)
+  const isAnyPocOnGap = (userId: number | undefined, gap: GapWithRelations | undefined, pocs: GapPoc[] | undefined) => {
+    if (!userId || !gap || !pocs) return false;
+    // Check if user is primary assignee OR in the POC list
+    return gap.assignedToId === userId || pocs.some(poc => poc.userId === userId);
+  };
   const [resolutionSummary, setResolutionSummary] = useState("");
   const [resolutionFiles, setResolutionFiles] = useState<File[]>([]);
   const [isResolveDialogOpen, setIsResolveDialogOpen] = useState(false);
@@ -789,7 +796,7 @@ export default function GapDetailPage() {
           </Card>
 
           <div className="space-y-2">
-            {userData?.user && gap?.status === "Assigned" && gap?.assignedToId === userData.user.id && (
+            {userData?.user && gap?.status === "Assigned" && isAnyPocOnGap(userData.user.id, gap, gapData?.pocs) && (
               <Button 
                 className="w-full" 
                 variant="default"
@@ -811,7 +818,7 @@ export default function GapDetailPage() {
               </Button>
             )}
             
-            {userData?.user && ["Management", "Admin"].includes(userData.user.role) && 
+            {userData?.user && (["Management", "Admin"].includes(userData.user.role) || isAnyPocOnGap(userData.user.id, gap, gapData?.pocs)) && 
              gap && gap.status !== "Resolved" && gap.status !== "Closed" && (
               <Dialog open={isResolveDialogOpen} onOpenChange={setIsResolveDialogOpen}>
                 <DialogTrigger asChild>
@@ -902,7 +909,7 @@ export default function GapDetailPage() {
             </Dialog>
             )}
             
-            {userData?.user && gap?.assignedToId === userData.user.id && (
+            {userData?.user && isAnyPocOnGap(userData.user.id, gap, gapData?.pocs) && (
               <Dialog open={isExtensionDialogOpen} onOpenChange={setIsExtensionDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="outline" className="w-full" data-testid="button-request-extension">

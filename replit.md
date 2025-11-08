@@ -1,7 +1,7 @@
-# GapOps - Process Gap Intelligence & Resolution Hub
+# SolvExtra GO - Process Gap Intelligence & Resolution Hub
 
 ## Overview
-GapOps is a full-stack AI-assisted Process Gap Intelligence & Resolution system designed to streamline the identification, tracking, and resolution of operational inefficiencies. It features a robust role-based access control system, AI-powered semantic search for gap similarity, a comprehensive gap management workflow with real-time updates and notifications, and dynamic form creation. The system aims to improve organizational efficiency, ensure compliance through detailed audit logging, and provide clear insights into process performance through role-specific dashboards. Built with React, Express, and PostgreSQL, GapOps offers a scalable and maintainable solution for enhancing operational smoothness.
+SolvExtra GO is a full-stack AI-assisted Process Gap Intelligence & Resolution system designed to streamline the identification, tracking, and resolution of operational inefficiencies. It features a robust role-based access control system, AI-powered semantic search for gap similarity, a comprehensive gap management workflow with real-time updates and notifications, and dynamic form creation. The system aims to improve organizational efficiency, ensure compliance through detailed audit logging, and provide clear insights into process performance through role-specific dashboards. Built with React, Express, and PostgreSQL, SolvExtra GO offers a scalable and maintainable solution for enhancing operational smoothness.
 
 ## User Preferences
 I prefer detailed explanations.
