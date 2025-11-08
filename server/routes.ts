@@ -448,6 +448,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Debug endpoint to test database connection
+  app.get("/api/debug/db-test", async (req, res) => {
+    try {
+      const dbUrl = process.env.DATABASE_URL || '';
+      const maskedUrl = dbUrl.replace(/:[^:@]+@/, ':****@');
+      
+      console.log('[DB-TEST] Testing database connection...');
+      console.log('[DB-TEST] DATABASE_URL configured:', !!process.env.DATABASE_URL);
+      console.log('[DB-TEST] Masked URL:', maskedUrl);
+      console.log('[DB-TEST] Is Neon DB:', dbUrl.includes('neon.tech'));
+      
+      // Test a simple query
+      const result = await storage.getAllUsers();
+      
+      return res.json({ 
+        success: true, 
+        message: "Database connection working",
+        userCount: result.length,
+        dbType: dbUrl.includes('neon.tech') ? 'Neon' : 'PostgreSQL',
+        maskedUrl 
+      });
+    } catch (error: any) {
+      console.error('[DB-TEST] Database connection failed:', error);
+      return res.status(500).json({ 
+        success: false,
+        error: error.message,
+        code: error.code,
+        detail: error.detail
+      });
+    }
+  });
+
   app.get("/api/auth/me", requireAuth, async (req, res) => {
     try {
       if (!req.session.userId) {
