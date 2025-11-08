@@ -437,7 +437,20 @@ export default function GapDetailPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => navigate(`/gap/${originalGapData.gap.id}`)}
+                          onClick={() => {
+                            if (userData?.user) {
+                              const role = userData.user.role;
+                              if (role === "Admin") {
+                                navigate(`/admin/gaps/${originalGapData.gap.id}`);
+                              } else if (role === "Management") {
+                                navigate(`/management/gaps/${originalGapData.gap.id}`);
+                              } else if (role === "POC") {
+                                navigate(`/poc/gaps/${originalGapData.gap.id}`);
+                              } else {
+                                navigate(`/qa/gaps/${originalGapData.gap.id}`);
+                              }
+                            }
+                          }}
                           className="mt-2"
                           data-testid="button-view-original-gap"
                         >
