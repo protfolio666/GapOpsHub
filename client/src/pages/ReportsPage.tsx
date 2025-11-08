@@ -64,6 +64,29 @@ export default function ReportsPage() {
   // Fetch filtered gaps
   const { data: reportData, isLoading, refetch } = useQuery<{ gaps: GapWithRelations[]; total: number }>({
     queryKey: ["/api/reports/gaps", filters],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      
+      if (filters.dateFrom) params.append('dateFrom', filters.dateFrom);
+      if (filters.dateTo) params.append('dateTo', filters.dateTo);
+      if (filters.templateIds?.length) params.append('templateIds', filters.templateIds.join(','));
+      if (filters.statuses?.length) params.append('statuses', filters.statuses.join(','));
+      if (filters.departments?.length) params.append('departments', filters.departments.join(','));
+      if (filters.userIds?.length) params.append('userIds', filters.userIds.join(','));
+      if (filters.roles?.length) params.append('roles', filters.roles.join(','));
+      if (filters.employeeIds?.length) params.append('employeeIds', filters.employeeIds.join(','));
+      if (filters.emails?.length) params.append('emails', filters.emails.join(','));
+
+      const response = await fetch(`/api/reports/gaps?${params.toString()}`, {
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch reports');
+      }
+
+      return response.json();
+    },
     enabled: false, // Only fetch when user clicks "Apply Filters"
   });
 
