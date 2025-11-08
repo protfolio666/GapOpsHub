@@ -39,7 +39,25 @@ The system is built on a React 18 (TypeScript) frontend utilizing `shadcn/ui` fo
 - **Socket.io**: Enables real-time, bidirectional communication between web clients and the server.
 ## Recent Changes
 
-### November 8, 2025 (Latest - Bug Fixes & POC Visibility)
+### November 8, 2025 (Latest - Branding Update & Secondary POC Permissions)
+- **Secondary POC Full Permissions**: Enabled all gap resolution actions for secondary POCs
+  - Added `isAnyPocOnGap` helper function to check both primary and secondary POC status
+  - Secondary POCs can now mark gaps as In Progress
+  - Secondary POCs can now resolve gaps with resolution summary and attachments
+  - Secondary POCs can now request TAT extensions
+  - Updated all permission checks in GapDetailPage to use the helper function
+- **SolvExtra GO Branding**: Complete rebrand from GapOps to SolvExtra GO
+  - Updated application title in index.html
+  - Updated sidebar header with "SE" logo and "SolvExtra GO" text
+  - Updated replit.md documentation
+  - Updated login page with new branding and logo
+- **Login Page Redesign**: Modern two-column layout with gradient background
+  - Left side: animated gradient background with floating logo
+  - Right side: glass morphism card with login form
+  - Smooth fade-in animations and pulse effect on logo
+  - Responsive design with mobile optimization
+
+### November 8, 2025 (Earlier - Bug Fixes & POC Visibility)
 - **TAT Extensions Page Fix**: Fixed runtime error where `requester` was undefined
   - Changed to use `requestedBy` property to match backend response
 - **POC Performance Query Fix**: Fixed database error with audit log queries
