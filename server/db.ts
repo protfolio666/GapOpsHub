@@ -21,14 +21,14 @@ if (isNeonDb) {
   // Neon serverless configuration
   neonConfig.webSocketConstructor = ws;
   pool = new NeonPool({ connectionString: process.env.DATABASE_URL });
-  db = drizzleNeon({ client: pool, schema });
+  db = drizzleNeon(pool, { schema });
 } else {
   // Standard PostgreSQL configuration (Railway, etc.)
   pool = new PgPool({
     connectionString: process.env.DATABASE_URL,
     ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : undefined,
   });
-  db = drizzleNode({ client: pool, schema });
+  db = drizzleNode(pool, { schema });
 }
 
 export { pool, db };
