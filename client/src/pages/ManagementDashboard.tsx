@@ -49,6 +49,11 @@ export default function ManagementDashboard() {
     enabled: !!selectedGap,
   });
 
+  const { data: allGapsData } = useQuery({
+    queryKey: ["/api/gaps", "all-for-duplicate"],
+    queryFn: () => gapApi.getAll(),
+  });
+
   const assignGapMutation = useMutation({
     mutationFn: (data: { gapId: number; assignedToId: number; tatDeadline: string }) =>
       gapApi.assign(data.gapId, {
@@ -119,6 +124,10 @@ export default function ManagementDashboard() {
   const newGaps = newGapsData?.gaps || [];
   const pocs = pocsData?.users || [];
   const similarGaps = similarGapsData?.similarGaps || [];
+  const allGaps = allGapsData?.gaps || [];
+  
+  // Exclude the currently selected gap from the list
+  const availableGaps = allGaps.filter(g => g.id !== selectedGap && g.status !== "Closed");
 
   return (
     <div className="space-y-6" data-testid="page-management-dashboard">
@@ -266,16 +275,33 @@ export default function ManagementDashboard() {
                                       <SelectValue placeholder="Choose original gap" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                      {similarGaps.map((sg) => (
-                                        <SelectItem key={sg.gap?.id} value={sg.gap?.id?.toString() || ""}>
-                                          {sg.gap?.gapId} - {sg.gap?.title} ({Math.round(sg.similarityScore * 100)}% similar)
-                                        </SelectItem>
-                                      ))}
+                                      {similarGaps.length > 0 && (
+                                        <>
+                                          <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground">
+                                            AI Suggested (Similar)
+                                          </div>
+                                          {similarGaps.map((sg) => (
+                                            <SelectItem key={sg.gap?.id} value={sg.gap?.id?.toString() || ""}>
+                                              {sg.gap?.gapId} - {sg.gap?.title} ({Math.round(sg.similarityScore * 100)}% similar)
+                                            </SelectItem>
+                                          ))}
+                                          <div className="px-2 py-1.5 text-sm font-semibold text-muted-foreground border-t mt-2">
+                                            All Other Gaps
+                                          </div>
+                                        </>
+                                      )}
+                                      {availableGaps
+                                        .filter(g => !similarGaps.some(sg => sg.gap?.id === g.id))
+                                        .map((gap) => (
+                                          <SelectItem key={gap.id} value={gap.id.toString()}>
+                                            {gap.gapId} - {gap.title}
+                                          </SelectItem>
+                                        ))}
                                     </SelectContent>
                                   </Select>
-                                  {similarGaps.length === 0 && (
+                                  {similarGaps.length === 0 && availableGaps.length === 0 && (
                                     <p className="text-sm text-muted-foreground mt-2">
-                                      No similar gaps found. You can still mark as duplicate by entering a gap ID manually.
+                                      No other gaps available to mark as duplicate.
                                     </p>
                                   )}
                                 </div>

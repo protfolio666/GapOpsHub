@@ -2,8 +2,8 @@ import type { Gap } from "@shared/schema";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
-// Custom model from environment variable, defaults to free Llama model
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "meta-llama/llama-3.1-8b-instruct:free";
+// Custom model from environment variable, defaults to Google Gemini Flash (free tier)
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || "google/gemini-flash-1.5";
 
 interface OpenRouterMessage {
   role: "system" | "user" | "assistant";
