@@ -39,7 +39,21 @@ The system is built on a React 18 (TypeScript) frontend utilizing `shadcn/ui` fo
 - **Socket.io**: Enables real-time, bidirectional communication between web clients and the server.
 ## Recent Changes
 
-### November 8, 2025 (Latest - POC Performance & TAT Extensions Review)
+### November 8, 2025 (Latest - Bug Fixes & POC Visibility)
+- **TAT Extensions Page Fix**: Fixed runtime error where `requester` was undefined
+  - Changed to use `requestedBy` property to match backend response
+- **POC Performance Query Fix**: Fixed database error with audit log queries
+  - Replaced SQL `ANY` syntax with `inArray` for Postgres compatibility
+  - Fixed empty set handling to prevent query errors
+- **POC Assignment Permissions**: Restricted POC addition to Primary POC only
+  - Only Primary POC, Admin, and Management can now add/remove POCs
+  - Previously all POCs could add other POCs (fixed security issue)
+- **POC Gap Visibility**: Newly added POCs can now see their assigned gaps
+  - Created `getGapsByPoc` method to include both primary and secondary POC assignments
+  - POCs now see gaps where they are either the primary assignee OR in the POC list
+  - Fixed issue where secondary POCs couldn't see gaps assigned to them
+
+### November 8, 2025 (Earlier - POC Performance & TAT Extensions Review)
 - **POC Performance Tracking System**: Complete performance metrics and dashboard
   - Admin dashboard showing all POCs with comprehensive performance metrics
   - POC-specific dashboard showing their own performance data
