@@ -332,7 +332,8 @@ export default function GapDetailPage() {
   }
 
   const similarGaps = (similarGapsData?.similarGaps || []).map(sg => ({
-    id: sg.gap.gapId,
+    id: sg.gap.gapId, // This is the display ID like "GAP-0002"
+    numericId: sg.gap.id, // This is the database ID
     title: sg.gap.title,
     similarity: Math.round(sg.similarityScore),
   }));
@@ -716,7 +717,22 @@ export default function GapDetailPage() {
             similarGaps={similarGaps}
             suggestedSOPs={sopSuggestions}
             onApplySOP={(sopId) => console.log("Apply SOP:", sopId)}
-            onViewGap={(gapId) => navigate(`/*/gaps/${gapId}`)}
+            onViewGap={(gapIdStr) => {
+              // Find the gap by gapId string to get the numeric ID
+              const targetGap = similarGaps.find(sg => sg.id === gapIdStr);
+              if (targetGap && userData?.user) {
+                // Navigate using the route pattern based on user role
+                if (userData.user.role === "Admin") {
+                  navigate(`/admin/gaps/${targetGap.numericId}`);
+                } else if (userData.user.role === "Management") {
+                  navigate(`/management/gaps/${targetGap.numericId}`);
+                } else if (userData.user.role === "POC") {
+                  navigate(`/poc/gaps/${targetGap.numericId}`);
+                } else {
+                  navigate(`/qa/gaps/${targetGap.numericId}`);
+                }
+              }
+            }}
           />
 
           <Card>

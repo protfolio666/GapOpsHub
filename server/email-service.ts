@@ -1,6 +1,6 @@
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 const SENDGRID_API_URL = "https://api.sendgrid.com/v3/mail/send";
-const FROM_EMAIL = "noreply@gapops.app"; // Configure your verified sender
+const FROM_EMAIL = "contactus@solvextra.com"; // Verified sender in SendGrid
 
 interface EmailOptions {
   to: string;
