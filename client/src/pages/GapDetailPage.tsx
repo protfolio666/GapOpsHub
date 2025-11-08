@@ -104,6 +104,12 @@ export default function GapDetailPage() {
     enabled: !!gapData?.gap?.duplicateOfId,
   });
 
+  // Fetch audit logs to find who closed this gap as duplicate
+  const { data: closerData } = useQuery<{ closer: { name: string; email: string } | null }>({
+    queryKey: [`/api/gaps/${gapId}/closer`],
+    enabled: !!gapId && !!gapData?.gap?.duplicateOfId,
+  });
+
   const addCommentMutation = useMutation({
     mutationFn: async ({ content, attachments }: { content: string; attachments: any[] }) => {
       return await apiRequest("POST", `/api/gaps/${gapId}/comments`, { content, attachments });
@@ -409,6 +415,24 @@ export default function GapDetailPage() {
                         <p className="text-sm">
                           <strong>Title:</strong> {originalGapData.gap.title}
                         </p>
+                        {closerData?.closer && (
+                          <>
+                            <Separator className="my-2" />
+                            <p className="text-sm">
+                              <strong>Closed By:</strong> {closerData.closer.name}
+                            </p>
+                            <p className="text-sm">
+                              <strong>Email for Clarification:</strong>{" "}
+                              <a 
+                                href={`mailto:${closerData.closer.email}`} 
+                                className="text-primary hover:underline"
+                                data-testid="link-closer-email"
+                              >
+                                {closerData.closer.email}
+                              </a>
+                            </p>
+                          </>
+                        )}
                         <Button
                           variant="outline"
                           size="sm"
@@ -420,9 +444,6 @@ export default function GapDetailPage() {
                         </Button>
                       </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      For questions about this determination, please check your email notification which includes contact information for the person who closed this gap.
-                    </p>
                   </CardContent>
                 </Card>
               )}

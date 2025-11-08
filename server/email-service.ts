@@ -11,40 +11,46 @@ interface EmailOptions {
 
 async function sendEmail(options: EmailOptions): Promise<boolean> {
   if (!SENDGRID_API_KEY) {
-    console.warn("SENDGRID_API_KEY not configured, skipping email");
+    console.warn("[Email] SENDGRID_API_KEY not configured, skipping email to:", options.to);
     return false;
   }
 
+  console.log(`[Email] Preparing to send email to: ${options.to}, subject: "${options.subject}"`);
+
   try {
+    const payload = {
+      personalizations: [{
+        to: [{ email: options.to }]
+      }],
+      from: { email: FROM_EMAIL },
+      subject: options.subject,
+      content: [
+        ...(options.text ? [{ type: "text/plain", value: options.text }] : []),
+        ...(options.html ? [{ type: "text/html", value: options.html }] : []),
+      ]
+    };
+
+    console.log(`[Email] Calling SendGrid API...`);
+    
     const response = await fetch(SENDGRID_API_URL, {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${SENDGRID_API_KEY}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        personalizations: [{
-          to: [{ email: options.to }]
-        }],
-        from: { email: FROM_EMAIL },
-        subject: options.subject,
-        content: [
-          ...(options.text ? [{ type: "text/plain", value: options.text }] : []),
-          ...(options.html ? [{ type: "text/html", value: options.html }] : []),
-        ]
-      }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
       const error = await response.text();
-      console.error("SendGrid API error:", error);
+      console.error(`[Email] SendGrid API error (${response.status}):`, error);
       return false;
     }
 
-    console.log("Email sent successfully to:", options.to);
+    console.log(`[Email] ✓ Email sent successfully to: ${options.to}`);
     return true;
   } catch (error) {
-    console.error("Email sending failed:", error);
+    console.error("[Email] Email sending failed with exception:", error);
     return false;
   }
 }

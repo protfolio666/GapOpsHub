@@ -987,8 +987,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const reporter = await storage.getUser(duplicateGap.reporterId);
       const closer = await storage.getUser(req.session.userId!);
       
+      console.log(`[Email] Attempting to send duplicate notification to ${reporter?.email}`);
+      
       if (reporter && closer) {
-        await sendGapMarkedAsDuplicateEmail(
+        const emailSent = await sendGapMarkedAsDuplicateEmail(
           reporter.name,
           reporter.email,
           duplicateGap.gapId,
@@ -998,12 +1000,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
           closer.name,
           closer.email
         );
+        console.log(`[Email] Duplicate notification ${emailSent ? 'sent successfully' : 'failed'} to ${reporter.email}`);
+      } else {
+        console.log(`[Email] Cannot send duplicate notification - reporter: ${!!reporter}, closer: ${!!closer}`);
       }
 
       return res.json({ gap });
     } catch (error) {
       console.error("Mark as duplicate error:", error);
       return res.status(500).json({ message: "Failed to mark gap as duplicate" });
+    }
+  });
+
+  // Get who closed a gap as duplicate (from audit logs)
+  app.get("/api/gaps/:id/closer", requireAuth, async (req, res) => {
+    try {
+      const gapId = Number(req.params.id);
+      
+      // Get audit logs for this gap
+      const auditLogs = await storage.getAuditLogsByEntity("gap", gapId);
+      
+      // Find the gap_marked_duplicate action
+      const duplicateLog = auditLogs.find(log => log.action === "gap_marked_duplicate");
+      
+      if (!duplicateLog || !duplicateLog.userId) {
+        return res.json({ closer: null });
+      }
+      
+      // Get the user who performed the action
+      const closer = await storage.getUser(duplicateLog.userId);
+      
+      if (!closer) {
+        return res.json({ closer: null });
+      }
+      
+      return res.json({ 
+        closer: {
+          name: closer.name,
+          email: closer.email
+        }
+      });
+    } catch (error) {
+      console.error("Get closer error:", error);
+      return res.status(500).json({ message: "Failed to get closer information" });
     }
   });
 
