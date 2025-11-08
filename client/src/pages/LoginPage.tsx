@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
 import logoUrl from "@assets/IMG_3463-removebg-preview_1762618462943.png";
-import puzzleIllustration from "@assets/stock_images/colorful_puzzle_piec_f5f048ad.jpg";
+import puzzleIllustration from "@assets/generated_images/Modern_HR_teamwork_puzzle_illustration_79d97e82.png";
 
 interface LoginPageProps {
   onLogin: (email: string, password: string) => void;
@@ -14,7 +14,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const handleLDAPLogin = async () => {
     setIsLoading(true);
     try {
-      // For demo purposes, use default admin credentials
+      // For demo purposes, use admin credentials
       await onLogin("admin@gapops.com", "Password123!");
     } finally {
       setIsLoading(false);
@@ -66,7 +66,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   Connecting...
                 </>
               ) : (
-                "Continue with Flipkart LDAP Login"
+                "Continue with SolvExtra LDAP Login"
               )}
             </Button>
           </div>
