@@ -1364,6 +1364,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/gaps/:id/timeline", requireAuth, async (req, res) => {
+    try {
+      const gapId = Number(req.params.id);
+      
+      // Verify gap exists and user has access
+      const gap = await storage.getGap(gapId);
+      if (!gap) {
+        return res.status(404).json({ message: "Gap not found" });
+      }
+
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // RBAC: Same access control as GET /api/gaps/:id
+      const isAssignedPoc = await storage.isUserAssignedPoc(gapId, user.id);
+      if (user.role !== "Admin" && user.role !== "Management") {
+        if (user.role === "QA/Ops" && gap.reporterId !== user.id) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+        if (user.role === "POC" && gap.assignedToId !== user.id && !isAssignedPoc) {
+          return res.status(403).json({ message: "Access denied" });
+        }
+      }
+
+      const timeline = await storage.getGapTimeline(gapId);
+      return res.json({ timeline });
+    } catch (error) {
+      console.error("Get gap timeline error:", error);
+      return res.status(500).json({ message: "Failed to get gap timeline" });
+    }
+  });
+
   app.get("/api/gaps/:id/similar", requireAuth, async (req, res) => {
     try {
       const similarGaps = await storage.getSimilarGaps(Number(req.params.id));
@@ -1512,7 +1546,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
           reporter.name,
           reporter.email,
           gap.gapId,
-          gap.title
+          gap.title,
+          gap.id,
+          reporter.role
         ).catch(console.error);
       }
 

@@ -109,8 +109,18 @@ export async function sendGapResolutionEmail(
   reporterName: string,
   reporterEmail: string,
   gapId: string,
-  gapTitle: string
+  gapTitle: string,
+  gapNumericId: number,
+  reporterRole: string = "QA/Ops"
 ): Promise<boolean> {
+  const baseUrl = process.env.BASE_URL || "https://gapops.replit.app";
+  
+  const rolePrefix = reporterRole === "Admin" ? "admin" :
+                     reporterRole === "Management" ? "management" :
+                     reporterRole === "POC" ? "poc" : "qa";
+  
+  const viewUrl = `${baseUrl}/${rolePrefix}/gaps/${gapNumericId}`;
+  
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2 style="color: #16a34a;">Gap Resolved</h2>
@@ -125,7 +135,7 @@ export async function sendGapResolutionEmail(
       
       <p>Please log in to GapOps to review the resolution details and provide feedback if needed.</p>
       
-      <a href="https://gapops.replit.app" style="display: inline-block; background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px;">
+      <a href="${viewUrl}" style="display: inline-block; background-color: #16a34a; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 20px;">
         View Resolution
       </a>
       

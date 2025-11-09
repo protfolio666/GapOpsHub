@@ -21,6 +21,7 @@ import { useEffect, useState, useRef } from "react";
 import { io, Socket } from "socket.io-client";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { format } from "date-fns";
 import type { Gap, Comment } from "@shared/schema";
 
 interface GapPoc {
@@ -105,6 +106,18 @@ export default function GapDetailPage() {
 
   const { data: commentsData } = useQuery<{ comments: CommentWithAuthor[] }>({
     queryKey: [`/api/gaps/${gapId}/comments`],
+    enabled: !!gapId,
+  });
+
+  // Fetch comprehensive timeline
+  const { data: timelineData } = useQuery<{ timeline: Array<{
+    type: string;
+    occurredAt: string;
+    actorId: number | null;
+    actor: any | null;
+    metadata: any;
+  }> }>({
+    queryKey: [`/api/gaps/${gapId}/timeline`],
     enabled: !!gapId,
   });
 
@@ -383,15 +396,37 @@ export default function GapDetailPage() {
     reasoning: string;
   }> : [];
 
-  // Build timeline events - only show events with accurate dedicated timestamps
-  const timelineEvents = [
-    { title: "Gap Created", timestamp: new Date(gap.createdAt), completed: true },
-    gap.assignedAt && { title: "Assigned to POC", timestamp: new Date(gap.assignedAt), completed: true },
-    gap.inProgressAt && { title: "In Progress", timestamp: new Date(gap.inProgressAt), completed: true },
-    gap.resolvedAt && { title: "Resolved", timestamp: new Date(gap.resolvedAt), completed: true },
-    gap.reopenedAt && { title: "Reopened", timestamp: new Date(gap.reopenedAt), completed: true },
-    gap.closedAt && { title: "Closed", timestamp: new Date(gap.closedAt), completed: true },
-  ].filter(Boolean).sort((a: any, b: any) => a.timestamp.getTime() - b.timestamp.getTime()) as Array<{ title: string; timestamp: Date; completed: boolean }>;
+  // Build timeline events from comprehensive timeline API
+  const timelineEvents = (timelineData?.timeline || []).map((event) => {
+    let title = "";
+    switch (event.type) {
+      case "created":
+        title = "Gap Created";
+        break;
+      case "assigned":
+        title = `Assigned to ${event.actor?.name || "POC"}`;
+        break;
+      case "in_progress":
+        title = "Work Started";
+        break;
+      case "resolved":
+        title = `Resolved by ${event.actor?.name || "POC"}`;
+        break;
+      case "reopened":
+        title = `Reopened by ${event.actor?.name || "User"}`;
+        break;
+      case "closed":
+        title = "Closed";
+        break;
+      default:
+        title = event.type;
+    }
+    return {
+      title,
+      timestamp: new Date(event.occurredAt),
+      completed: true,
+    };
+  });
 
   // Keep attachments as objects (not strings) so download paths work
   const attachments = Array.isArray(gap.attachments) ? gap.attachments : [];
@@ -424,10 +459,13 @@ export default function GapDetailPage() {
       <div className="grid grid-cols-12 gap-6">
         <div className="col-span-8 space-y-6">
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="details" data-testid="tab-details">Details</TabsTrigger>
               <TabsTrigger value="attachments" data-testid="tab-attachments">
                 Attachments {attachments.length > 0 && `(${attachments.length})`}
+              </TabsTrigger>
+              <TabsTrigger value="resolutions" data-testid="tab-resolutions">
+                Resolutions {(timelineData?.timeline || []).filter(e => e.type === 'resolved').length > 0 && `(${(timelineData?.timeline || []).filter(e => e.type === 'resolved').length})`}
               </TabsTrigger>
               <TabsTrigger value="discussion" data-testid="tab-discussion">
                 Discussion {comments.length > 0 && `(${comments.length})`}
@@ -617,6 +655,76 @@ export default function GapDetailPage() {
                 </CardContent>
               </Card>
             </TabsContent>
+            <TabsContent value="resolutions" className="mt-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Resolution History</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {(timelineData?.timeline || []).filter(e => e.type === 'resolved').length > 0 ? (
+                    <div className="space-y-4">
+                      {(timelineData?.timeline || [])
+                        .filter(e => e.type === 'resolved')
+                        .reverse()
+                        .map((event, idx) => (
+                          <div key={idx} className="border-b last:border-b-0 pb-4 last:pb-0">
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <CheckCircle className="h-4 w-4 text-green-600" />
+                                <span className="text-sm font-medium">Resolution #{(timelineData?.timeline || []).filter(e => e.type === 'resolved').length - idx}</span>
+                              </div>
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(event.occurredAt), "MMM dd, yyyy 'at' h:mm a")}
+                              </span>
+                            </div>
+                            <div className="ml-6 space-y-2">
+                              <div>
+                                <span className="text-sm text-muted-foreground">Resolved by: </span>
+                                <span className="text-sm font-medium">{event.actor?.name || "Unknown"}</span>
+                                <span className="text-xs text-muted-foreground ml-2">({event.actor?.role})</span>
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium mb-1">Summary:</p>
+                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                                  {event.metadata?.resolutionSummary || "No summary provided"}
+                                </p>
+                              </div>
+                              {event.metadata?.resolutionAttachments && Array.isArray(event.metadata.resolutionAttachments) && event.metadata.resolutionAttachments.length > 0 && (
+                                <div>
+                                  <p className="text-sm font-medium mb-1">Attachments:</p>
+                                  <div className="space-y-1">
+                                    {event.metadata.resolutionAttachments.map((file: any, fileIdx: number) => {
+                                      const isFileObject = typeof file === "object" && file.path;
+                                      const displayName = isFileObject ? file.originalName : file;
+                                      let downloadPath = isFileObject ? file.path : null;
+                                      if (downloadPath && gapId) {
+                                        downloadPath = `${downloadPath}?gapId=${gapId}`;
+                                      }
+                                      return (
+                                        <div key={fileIdx} className="flex items-center gap-2 text-sm">
+                                          <FileText className="h-4 w-4 text-muted-foreground" />
+                                          <span className="flex-1">{displayName}</span>
+                                          {downloadPath && (
+                                            <a href={downloadPath} target="_blank" rel="noopener noreferrer" download={displayName}>
+                                              <Button variant="ghost" size="sm">Download</Button>
+                                            </a>
+                                          )}
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">No resolutions yet</p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
             <TabsContent value="discussion" className="mt-4">
               {gap.status === "Closed" || gap.status === "Resolved" ? (
                 <>
@@ -670,7 +778,7 @@ export default function GapDetailPage() {
                   <div>
                     <div className="flex items-center justify-between mb-1">
                       <p className="text-xs font-medium text-muted-foreground uppercase">Assigned POCs</p>
-                      {userData?.user && (["Admin", "Management"].includes(userData.user.role) || gapData.pocs.some(p => p.userId === userData.user.id && p.isPrimary)) && (
+                      {userData?.user && gap.assignedToId && (["Admin", "Management"].includes(userData.user.role) || gap.assignedToId === userData.user.id || gapData.pocs.some(p => p.userId === userData.user.id && p.isPrimary)) && (
                         <Dialog open={isAddPocDialogOpen} onOpenChange={setIsAddPocDialogOpen}>
                           <DialogTrigger asChild>
                             <Button variant="ghost" size="sm" data-testid="button-add-poc">

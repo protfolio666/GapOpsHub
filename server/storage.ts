@@ -49,6 +49,13 @@ export interface IStorage {
   // Resolution History operations
   getResolutionHistory(gapId: number): Promise<ResolutionHistory[]>;
   createResolutionHistory(history: InsertResolutionHistory): Promise<ResolutionHistory>;
+  getGapTimeline(gapId: number): Promise<Array<{
+    type: string;
+    occurredAt: Date;
+    actorId: number | null;
+    actor: PublicUser | null;
+    metadata: any;
+  }>>;
   
   // Comment operations
   getComment(id: number): Promise<Comment | undefined>;
@@ -437,6 +444,163 @@ export class DatabaseStorage implements IStorage {
     return newHistory;
   }
 
+  async getGapTimeline(gapId: number): Promise<Array<{
+    type: string;
+    occurredAt: Date;
+    actorId: number | null;
+    actor: PublicUser | null;
+    metadata: any;
+  }>> {
+    const gap = await this.getGap(gapId);
+    if (!gap) return [];
+
+    const events: Array<{
+      type: string;
+      occurredAt: Date;
+      actorId: number | null;
+      actor: PublicUser | null;
+      metadata: any;
+    }> = [];
+
+    events.push({
+      type: 'created',
+      occurredAt: new Date(gap.createdAt),
+      actorId: gap.reporterId,
+      actor: null,
+      metadata: { title: gap.title, priority: gap.priority }
+    });
+
+    if (gap.assignedAt && gap.assignedToId) {
+      events.push({
+        type: 'assigned',
+        occurredAt: new Date(gap.assignedAt),
+        actorId: gap.assignedToId,
+        actor: null,
+        metadata: { assignedToId: gap.assignedToId }
+      });
+    }
+
+    if (gap.inProgressAt) {
+      events.push({
+        type: 'in_progress',
+        occurredAt: new Date(gap.inProgressAt),
+        actorId: gap.updatedById,
+        actor: null,
+        metadata: {}
+      });
+    }
+
+    const history = await this.getResolutionHistory(gapId);
+    for (const entry of history) {
+      events.push({
+        type: 'resolved',
+        occurredAt: new Date(entry.resolvedAt),
+        actorId: entry.resolvedById,
+        actor: null,
+        metadata: {
+          resolutionSummary: entry.resolutionSummary,
+          resolutionAttachments: entry.resolutionAttachments
+        }
+      });
+
+      if (entry.reopenedAt && entry.reopenedById) {
+        events.push({
+          type: 'reopened',
+          occurredAt: new Date(entry.reopenedAt),
+          actorId: entry.reopenedById,
+          actor: null,
+          metadata: {}
+        });
+      }
+    }
+
+    if (gap.status === 'Resolved' && gap.resolvedAt) {
+      const alreadyHasThisResolution = events.some(
+        e => e.type === 'resolved' && 
+        Math.abs(new Date(e.occurredAt).getTime() - new Date(gap.resolvedAt!).getTime()) < 1000
+      );
+      if (!alreadyHasThisResolution) {
+        events.push({
+          type: 'resolved',
+          occurredAt: new Date(gap.resolvedAt),
+          actorId: gap.updatedById || gap.assignedToId,
+          actor: null,
+          metadata: {
+            resolutionSummary: gap.resolutionSummary,
+            resolutionAttachments: gap.resolutionAttachments
+          }
+        });
+      }
+    }
+
+    if (gap.status === 'Reopened' && gap.reopenedAt && gap.reopenedById) {
+      const alreadyHasThisReopen = events.some(
+        e => e.type === 'reopened' && 
+        Math.abs(new Date(e.occurredAt).getTime() - new Date(gap.reopenedAt!).getTime()) < 1000
+      );
+      if (!alreadyHasThisReopen) {
+        events.push({
+          type: 'reopened',
+          occurredAt: new Date(gap.reopenedAt),
+          actorId: gap.reopenedById,
+          actor: null,
+          metadata: {}
+        });
+      }
+    }
+
+    if (gap.closedAt) {
+      events.push({
+        type: 'closed',
+        occurredAt: new Date(gap.closedAt),
+        actorId: gap.closedById,
+        actor: null,
+        metadata: { duplicateOfId: gap.duplicateOfId }
+      });
+    }
+
+    // Merge audit log events
+    const auditLogs = await this.getAuditLogsByEntity('gap', gapId);
+    for (const log of auditLogs) {
+      // Skip if we already have an event for this action at this time
+      const isDuplicate = events.some(
+        e => e.type === log.action && 
+        Math.abs(new Date(e.occurredAt).getTime() - new Date(log.createdAt).getTime()) < 2000
+      );
+      
+      if (!isDuplicate) {
+        events.push({
+          type: log.action,
+          occurredAt: new Date(log.createdAt),
+          actorId: log.userId,
+          actor: null,
+          metadata: log.details || {}
+        });
+      }
+    }
+
+    events.sort((a, b) => a.occurredAt.getTime() - b.occurredAt.getTime());
+
+    for (const event of events) {
+      if (event.actorId) {
+        const actor = await this.getUser(event.actorId);
+        if (actor) {
+          event.actor = {
+            id: actor.id,
+            name: actor.name,
+            email: actor.email,
+            role: actor.role,
+            employeeId: actor.employeeId,
+            department: actor.department,
+            createdAt: actor.createdAt
+          };
+        }
+      }
+    }
+
+    return events;
+  }
+
   // SOP operations
   async getSop(id: number): Promise<Sop | undefined> {
     const [sop] = await db.select().from(sops).where(eq(sops.id, id));
@@ -784,57 +948,34 @@ export class DatabaseStorage implements IStorage {
         
         const totalAssigned = allGaps.length;
         
-        // Count resolved gaps (status = Resolved or Closed)
-        const resolvedGaps = allGaps.filter(
-          g => g.status === "Resolved" || g.status === "Closed"
-        );
-        const totalResolved = resolvedGaps.length;
+        // Use timeline to count all resolutions and reopens (not just current status)
+        let totalResolved = 0;
+        let totalReopened = 0;
+        const gapsWithReopens: any[] = [];
         
-        // Get gaps that were reopened (reopenedById is not null)
-        const reopenedGaps = allGaps.filter(g => g.reopenedById !== null);
-        const totalReopened = reopenedGaps.length;
-        
-        // Get reopen history for each reopened gap
-        const reopenHistory = await Promise.all(
-          reopenedGaps.map(async (gap) => {
-            // Get all reopen audit logs for this gap
-            const reopenLogs = await db
-              .select()
-              .from(auditLogs)
-              .where(
-                and(
-                  eq(auditLogs.entityType, "gap"),
-                  eq(auditLogs.entityId, gap.id),
-                  eq(auditLogs.action, "reopen")
-                )
-              )
-              .orderBy(auditLogs.createdAt);
-            
-            // Get resolution history
-            const resolutionLogs = await db
-              .select()
-              .from(auditLogs)
-              .where(
-                and(
-                  eq(auditLogs.entityType, "gap"),
-                  eq(auditLogs.entityId, gap.id),
-                  eq(auditLogs.action, "resolve")
-                )
-              )
-              .orderBy(auditLogs.createdAt);
-            
-            return {
+        for (const gap of allGaps) {
+          const timeline = await this.getGapTimeline(gap.id);
+          const resolutions = timeline.filter(e => e.type === 'resolved');
+          const reopens = timeline.filter(e => e.type === 'reopened');
+          
+          totalResolved += resolutions.length;
+          totalReopened += reopens.length;
+          
+          if (reopens.length > 0) {
+            gapsWithReopens.push({
               gapId: gap.gapId,
               gapTitle: gap.title,
-              reopenCount: reopenLogs.length,
-              reopenDates: reopenLogs.map(log => log.createdAt),
-              resolutions: resolutionLogs.map(log => ({
-                resolvedAt: log.createdAt,
-                resolution: (log.changes as any)?.resolution || "N/A"
+              reopenCount: reopens.length,
+              reopenDates: reopens.map(e => e.occurredAt),
+              resolutions: resolutions.map(e => ({
+                resolvedAt: e.occurredAt,
+                resolution: e.metadata?.resolutionSummary || "N/A"
               }))
-            };
-          })
-        );
+            });
+          }
+        }
+        
+        const reopenHistory = gapsWithReopens;
         
         // Count TAT extension requests by this POC
         const pocExtensions = await db
@@ -861,8 +1002,9 @@ export class DatabaseStorage implements IStorage {
         const totalDelayed = delayedResponses.length;
         
         // Count only resolved gaps that were delayed
-        const resolvedDelayed = resolvedGaps.filter(gap => {
+        const resolvedDelayed = allGaps.filter(gap => {
           if (!gap.tatDeadline || !gap.resolvedAt) return false;
+          if (gap.status !== "Resolved" && gap.status !== "Closed") return false;
           return new Date(gap.resolvedAt) > new Date(gap.tatDeadline);
         });
         
