@@ -1,5 +1,5 @@
 import { Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter } from "@/components/ui/sidebar";
-import { LayoutDashboard, FileText, Settings, Users, BookOpen, BarChart3, PlusCircle, ListChecks, FormInput, LogOut, Clock, TrendingUp, AlertTriangle, Sparkles } from "lucide-react";
+import { LayoutDashboard, FileText, Settings, Users, BookOpen, BarChart3, PlusCircle, ListChecks, FormInput, LogOut, Clock, TrendingUp, AlertTriangle, Sparkles, Bell, Repeat } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import UserAvatar from "./UserAvatar";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ const menuItems = {
     { title: "Overdue Gaps", url: "/admin/overdue", icon: AlertTriangle },
     { title: "TAT Extensions", url: "/admin/tat-extensions", icon: Clock },
     { title: "POC Performance", url: "/admin/poc-performance", icon: TrendingUp },
+    { title: "Recurring Gaps", url: "/admin/recurring-gaps", icon: Repeat },
     { title: "Users & Roles", url: "/admin/users", icon: Users },
     { title: "Form Builder", url: "/admin/form-builder", icon: FormInput },
     { title: "SOPs", url: "/admin/sops", icon: BookOpen },
@@ -32,6 +33,7 @@ const menuItems = {
     { title: "All Gaps", url: "/management/gaps", icon: FileText },
     { title: "Overdue Gaps", url: "/management/overdue", icon: AlertTriangle },
     { title: "TAT Extensions", url: "/management/tat-extensions", icon: Clock },
+    { title: "Recurring Gaps", url: "/management/recurring-gaps", icon: Repeat },
     { title: "Form Builder", url: "/management/form-builder", icon: FormInput },
     { title: "SOPs", url: "/management/sops", icon: BookOpen },
     { title: "Reports", url: "/management/reports", icon: BarChart3 },
@@ -119,6 +121,10 @@ export default function AppSidebar({ userRole, userName }: AppSidebarProps) {
         </SidebarGroup>
       </SidebarContent>
       <SidebarFooter className="p-4 border-t space-y-3">
+        <Link href="/settings/notifications" className="flex items-center gap-2 px-2 py-2 rounded-md hover-elevate text-sm">
+          <Bell className="h-4 w-4" />
+          <span>Notifications</span>
+        </Link>
         <div className="flex items-center gap-3">
           <UserAvatar name={userName} size="sm" />
           <div className="flex-1 min-w-0">
