@@ -2,12 +2,14 @@ import { db } from "./db";
 import { 
   users, gaps, comments, sops, formTemplates, formFields, 
   gapAssignments, tatExtensions, similarGaps, auditLogs, gapPocs, resolutionHistory,
+  notificationPreferences, recurringGapPatterns,
   type User, type InsertUser, type Gap, type InsertGap,
   type Comment, type InsertComment, type Sop, type InsertSop,
   type FormTemplate, type InsertFormTemplate, type FormField, type InsertFormField,
   type GapAssignment, type InsertGapAssignment, type TatExtension, type InsertTatExtension,
   type SimilarGap, type InsertSimilarGap, type AuditLog, type InsertAuditLog,
-  type GapPoc, type InsertGapPoc, type PublicUser, type ResolutionHistory, type InsertResolutionHistory
+  type GapPoc, type InsertGapPoc, type PublicUser, type ResolutionHistory, type InsertResolutionHistory,
+  type NotificationPreferences, type InsertNotificationPreferences, type RecurringGapPattern, type InsertRecurringGapPattern
 } from "@shared/schema";
 import { eq, desc, and, sql, or, inArray } from "drizzle-orm";
 

@@ -253,3 +253,56 @@ export const insertAuditLogSchema = createInsertSchema(auditLogs).omit({
 });
 export type InsertAuditLog = z.infer<typeof insertAuditLogSchema>;
 export type AuditLog = typeof auditLogs.$inferSelect;
+
+// Notification Preferences
+export const notificationPreferences = pgTable("notification_preferences", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id, { onDelete: "cascade" }).notNull().unique(),
+  frequency: varchar("frequency", { length: 20 }).default("immediate").notNull(), // immediate, daily, weekly
+  channels: varchar("channels", { length: 50 }).default("both").notNull(), // in-app, email, both
+  notifyGapAssigned: boolean("notify_gap_assigned").default(true),
+  notifyGapResolved: boolean("notify_gap_resolved").default(true),
+  notifyComment: boolean("notify_comment").default(true),
+  notifyTatExtension: boolean("notify_tat_extension").default(true),
+  notifyOverdueGap: boolean("notify_overdue_gap").default(true),
+  enabled: boolean("enabled").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertNotificationPreferencesSchema = createInsertSchema(notificationPreferences).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+export type InsertNotificationPreferences = z.infer<typeof insertNotificationPreferencesSchema>;
+export type NotificationPreferences = typeof notificationPreferences.$inferSelect;
+
+// Recurring Gap Patterns - Track systemic issues
+export const recurringGapPatterns = pgTable("recurring_gap_patterns", {
+  id: serial("id").primaryKey(),
+  patternKey: varchar("pattern_key", { length: 255 }).notNull().unique(), // Hash of similar gap characteristics
+  gapIds: jsonb("gap_ids").default([]).notNull(), // Array of gap IDs with this pattern
+  occurrenceCount: integer("occurrence_count").default(1).notNull(),
+  department: varchar("department", { length: 100 }),
+  isFlaggedAsSystemic: boolean("is_flagged_as_systemic").default(false),
+  systemicSeverity: varchar("systemic_severity", { length: 20 }), // low, medium, high, critical
+  commonTitle: text("common_title"), // Common theme/title of these gaps
+  firstOccurrenceAt: timestamp("first_occurrence_at").notNull(),
+  lastOccurrenceAt: timestamp("last_occurrence_at").notNull(),
+  resolvedCount: integer("resolved_count").default(0),
+  suggestedAction: text("suggested_action"), // Suggested root cause or prevention
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => ({
+  patternKeyIdx: index("recurring_pattern_key_idx").on(table.patternKey),
+  departmentIdx: index("recurring_department_idx").on(table.department),
+}));
+
+export const insertRecurringGapPatternSchema = createInsertSchema(recurringGapPatterns).omit({ 
+  id: true, 
+  createdAt: true,
+  updatedAt: true
+});
+export type InsertRecurringGapPattern = z.infer<typeof insertRecurringGapPatternSchema>;
+export type RecurringGapPattern = typeof recurringGapPatterns.$inferSelect;
