@@ -122,6 +122,19 @@ export interface IStorage {
   
   // POC Performance operations
   getPocPerformanceMetrics(pocId?: number): Promise<any[]>;
+
+  // Notification Preferences operations
+  getNotificationPreferences(userId: number): Promise<NotificationPreferences | undefined>;
+  createNotificationPreferences(prefs: InsertNotificationPreferences): Promise<NotificationPreferences>;
+  updateNotificationPreferences(userId: number, prefs: Partial<InsertNotificationPreferences>): Promise<NotificationPreferences | undefined>;
+
+  // Recurring Gap Pattern operations
+  getRecurringGapPatterns(limit?: number): Promise<RecurringGapPattern[]>;
+  getRecurringGapPatternsByDepartment(department: string): Promise<RecurringGapPattern[]>;
+  getSystemicGapPatterns(): Promise<RecurringGapPattern[]>;
+  createRecurringGapPattern(pattern: InsertRecurringGapPattern): Promise<RecurringGapPattern>;
+  updateRecurringGapPattern(id: number, pattern: Partial<InsertRecurringGapPattern>): Promise<RecurringGapPattern | undefined>;
+  flagGapPatternAsSystemic(id: number, severity: string, suggestedAction: string): Promise<RecurringGapPattern | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1110,6 +1123,88 @@ export class DatabaseStorage implements IStorage {
     );
 
     return performanceData;
+  }
+
+  // Notification Preferences operations
+  async getNotificationPreferences(userId: number): Promise<NotificationPreferences | undefined> {
+    const [prefs] = await db
+      .select()
+      .from(notificationPreferences)
+      .where(eq(notificationPreferences.userId, userId));
+    return prefs;
+  }
+
+  async createNotificationPreferences(prefs: InsertNotificationPreferences): Promise<NotificationPreferences> {
+    const [newPrefs] = await db
+      .insert(notificationPreferences)
+      .values(prefs)
+      .returning();
+    return newPrefs;
+  }
+
+  async updateNotificationPreferences(userId: number, prefs: Partial<InsertNotificationPreferences>): Promise<NotificationPreferences | undefined> {
+    const [updated] = await db
+      .update(notificationPreferences)
+      .set({ ...prefs, updatedAt: new Date() })
+      .where(eq(notificationPreferences.userId, userId))
+      .returning();
+    return updated;
+  }
+
+  // Recurring Gap Pattern operations
+  async getRecurringGapPatterns(limit: number = 100): Promise<RecurringGapPattern[]> {
+    return await db
+      .select()
+      .from(recurringGapPatterns)
+      .orderBy(desc(recurringGapPatterns.occurrenceCount))
+      .limit(limit);
+  }
+
+  async getRecurringGapPatternsByDepartment(department: string): Promise<RecurringGapPattern[]> {
+    return await db
+      .select()
+      .from(recurringGapPatterns)
+      .where(eq(recurringGapPatterns.department, department))
+      .orderBy(desc(recurringGapPatterns.occurrenceCount));
+  }
+
+  async getSystemicGapPatterns(): Promise<RecurringGapPattern[]> {
+    return await db
+      .select()
+      .from(recurringGapPatterns)
+      .where(eq(recurringGapPatterns.isFlaggedAsSystemic, true))
+      .orderBy(desc(recurringGapPatterns.systemicSeverity));
+  }
+
+  async createRecurringGapPattern(pattern: InsertRecurringGapPattern): Promise<RecurringGapPattern> {
+    const [newPattern] = await db
+      .insert(recurringGapPatterns)
+      .values(pattern)
+      .returning();
+    return newPattern;
+  }
+
+  async updateRecurringGapPattern(id: number, pattern: Partial<InsertRecurringGapPattern>): Promise<RecurringGapPattern | undefined> {
+    const [updated] = await db
+      .update(recurringGapPatterns)
+      .set({ ...pattern, updatedAt: new Date() })
+      .where(eq(recurringGapPatterns.id, id))
+      .returning();
+    return updated;
+  }
+
+  async flagGapPatternAsSystemic(id: number, severity: string, suggestedAction: string): Promise<RecurringGapPattern | undefined> {
+    const [updated] = await db
+      .update(recurringGapPatterns)
+      .set({
+        isFlaggedAsSystemic: true,
+        systemicSeverity: severity,
+        suggestedAction: suggestedAction,
+        updatedAt: new Date()
+      })
+      .where(eq(recurringGapPatterns.id, id))
+      .returning();
+    return updated;
   }
 }
 
