@@ -25,6 +25,7 @@ import POCPerformancePage from "@/pages/POCPerformancePage";
 import SopBrowserPage from "@/pages/SopBrowserPage";
 import SopManagementPage from "@/pages/SopManagementPage";
 import AiSopSearchPage from "@/pages/AiSopSearchPage";
+import NotificationsPage from "@/pages/NotificationsPage";
 import NotFound from "@/pages/not-found";
 import type { PublicUser } from "@shared/schema";
 import { authApi } from "@/lib/api";
@@ -144,6 +145,8 @@ function Router({ user }: { user: PublicUser }) {
       <Route path="/ai-sop-search">
         <ProtectedRoute user={user} allowedRoles={["Admin", "Management", "QA/Ops", "POC"]} component={AiSopSearchPage} />
       </Route>
+
+      <Route path="/notifications" component={NotificationsPage} />
       
       <Route path="/admin/gaps/:id" component={GapDetailPage} />
       <Route path="/management/gaps/:id" component={GapDetailPage} />
