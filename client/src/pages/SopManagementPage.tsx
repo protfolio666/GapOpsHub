@@ -502,6 +502,15 @@ export default function SopManagementPage() {
           </DialogHeader>
 
           <div className="space-y-4">
+            {formData.parentSopId && (
+              <div>
+                <label className="text-sm font-medium">Parent SOP</label>
+                <div className="px-3 py-2 border border-input rounded-md bg-muted/50 text-sm">
+                  {sops.find(s => s.id === parseInt(formData.parentSopId))?.sopId} - {sops.find(s => s.id === parseInt(formData.parentSopId))?.title}
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="text-sm font-medium">Title *</label>
               <Input
