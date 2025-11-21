@@ -69,8 +69,11 @@ export interface IStorage {
   getAllSops(): Promise<Sop[]>;
   getActiveSops(): Promise<Sop[]>;
   getSopsByDepartment(department: string): Promise<Sop[]>;
+  getSopsByParent(parentSopId: number): Promise<Sop[]>;
+  searchSops(query: string): Promise<Sop[]>;
   createSop(sop: InsertSop): Promise<Sop>;
   updateSop(id: number, sop: Partial<InsertSop>): Promise<Sop | undefined>;
+  deleteSop(id: number): Promise<boolean>;
   
   // Form Template operations
   getFormTemplate(id: number): Promise<FormTemplate | undefined>;

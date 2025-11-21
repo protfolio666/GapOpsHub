@@ -88,11 +88,14 @@ export const sops = pgTable("sops", {
   content: text("content").notNull(),
   category: varchar("category", { length: 100 }),
   department: varchar("department", { length: 100 }),
+  parentSopId: integer("parent_sop_id").references(() => sops.id, { onDelete: "set null" }), // For hierarchical structure
   version: varchar("version", { length: 20 }).default("1.0"),
   createdById: integer("created_by_id").references(() => users.id).notNull(),
+  updatedById: integer("updated_by_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
   active: boolean("active").default(true),
+  embeddings: jsonb("embeddings"), // Store AI embeddings for semantic search
 });
 
 export const insertSopSchema = createInsertSchema(sops).omit({ 
@@ -100,6 +103,7 @@ export const insertSopSchema = createInsertSchema(sops).omit({
   createdAt: true, 
   updatedAt: true,
   sopId: true,
+  embeddings: true,
 });
 export type InsertSop = z.infer<typeof insertSopSchema>;
 export type Sop = typeof sops.$inferSelect;
