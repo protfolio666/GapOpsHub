@@ -1627,7 +1627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/sops", requireRole("Management", "Admin"), async (req, res) => {
     try {
-      const { title, description, content, category, department, version } = req.body;
+      const { title, description, content, category, department, version, parentSopId } = req.body;
 
       if (!title || !content) {
         return res.status(400).json({ message: "Title and content are required" });
@@ -1639,8 +1639,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         content,
         category: category || null,
         department: department || null,
+        parentSopId: parentSopId || null,
         version: version || "1.0",
         createdById: req.session.userId!,
+        updatedById: req.session.userId!,
         active: true,
       });
 
@@ -1653,7 +1655,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/sops/:id", requireRole("Management", "Admin"), async (req, res) => {
     try {
-      const sop = await storage.updateSop(Number(req.params.id), req.body);
+      const { title, description, content, category, department, version, parentSopId } = req.body;
+      
+      const updateData: any = {
+        ...(title && { title }),
+        ...(description !== undefined && { description }),
+        ...(content && { content }),
+        ...(category !== undefined && { category }),
+        ...(department !== undefined && { department }),
+        ...(version && { version }),
+        ...(parentSopId !== undefined && { parentSopId }),
+        updatedById: req.session.userId!,
+      };
+
+      const sop = await storage.updateSop(Number(req.params.id), updateData);
       if (!sop) {
         return res.status(404).json({ message: "SOP not found" });
       }

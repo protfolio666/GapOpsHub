@@ -57,7 +57,12 @@ export default function SopManagementPage() {
       setIsDialogOpen(false);
     },
     onError: (error: any) => {
-      toast({ title: "Failed to create SOP", description: error.message, variant: "destructive" });
+      console.error("Create SOP error:", error);
+      toast({ 
+        title: "Failed to create SOP", 
+        description: error?.message || "Please check your inputs and try again",
+        variant: "destructive" 
+      });
     },
   });
 
@@ -71,7 +76,12 @@ export default function SopManagementPage() {
       setIsDialogOpen(false);
     },
     onError: (error: any) => {
-      toast({ title: "Failed to update SOP", description: error.message, variant: "destructive" });
+      console.error("Update SOP error:", error);
+      toast({ 
+        title: "Failed to update SOP", 
+        description: error?.message || "Please check your inputs and try again",
+        variant: "destructive" 
+      });
     },
   });
 
@@ -82,7 +92,12 @@ export default function SopManagementPage() {
       toast({ title: "SOP deleted successfully" });
     },
     onError: (error: any) => {
-      toast({ title: "Failed to delete SOP", description: error.message, variant: "destructive" });
+      console.error("Delete SOP error:", error);
+      toast({ 
+        title: "Failed to delete SOP", 
+        description: error?.message || "Please try again",
+        variant: "destructive" 
+      });
     },
   });
 
