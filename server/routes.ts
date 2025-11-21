@@ -1562,16 +1562,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userAgent: req.headers["user-agent"] || null,
       });
 
-      // Send email notification to reporter
+      // Send email notification to reporter with CC to all POCs
       const reporter = await storage.getUser(gap.reporterId);
       if (reporter && reporter.email) {
+        // Fetch all POCs for this gap to CC them
+        const pocs = await storage.getGapPocs(gap.id);
+        const ccEmails = pocs
+          .map(poc => poc.user?.email || "")
+          .filter(email => email); // Remove empty emails
+        
         await sendGapResolutionEmail(
           reporter.name,
           reporter.email,
           gap.gapId,
           gap.title,
           gap.id,
-          reporter.role
+          reporter.role,
+          ccEmails.length > 0 ? ccEmails : undefined
         ).catch(console.error);
       }
 

@@ -66,7 +66,8 @@ export async function sendGapAssignmentEmail(
   gapId: string,
   gapTitle: string,
   priority: string,
-  tatDeadline?: Date
+  tatDeadline?: Date,
+  ccEmails?: string[]
 ): Promise<boolean> {
   const deadlineText = tatDeadline 
     ? `Deadline: ${tatDeadline.toLocaleDateString()}`
@@ -99,6 +100,7 @@ export async function sendGapAssignmentEmail(
 
   return sendEmail({
     to: assigneeEmail,
+    cc: ccEmails,
     subject: `[GapOps] New Gap Assigned: ${gapTitle}`,
     html,
   });
@@ -113,7 +115,8 @@ export async function sendGapResolutionEmail(
   gapId: string,
   gapTitle: string,
   gapNumericId: number,
-  reporterRole: string = "QA/Ops"
+  reporterRole: string = "QA/Ops",
+  ccEmails?: string[]
 ): Promise<boolean> {
   const baseUrl = process.env.BASE_URL || "https://gapops.replit.app";
   
@@ -149,6 +152,7 @@ export async function sendGapResolutionEmail(
 
   return sendEmail({
     to: reporterEmail,
+    cc: ccEmails,
     subject: `[GapOps] Gap Resolved: ${gapTitle}`,
     html,
   });
