@@ -30,6 +30,7 @@ import NotFound from "@/pages/not-found";
 import type { PublicUser } from "@shared/schema";
 import { authApi } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { initializeSocket, disconnectSocket } from "@/lib/socket";
 
 // Protected route component that checks user role
 function ProtectedRoute({ 
@@ -174,12 +175,14 @@ function App() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  // Check if user is already logged in
+  // Check if user is already logged in and initialize socket
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const response = await authApi.getMe();
         setUser(response.user);
+        // Initialize socket after authentication
+        initializeSocket();
       } catch (error) {
         // Not logged in, that's okay
       } finally {
@@ -188,6 +191,11 @@ function App() {
     };
 
     checkAuth();
+
+    // Cleanup socket on unmount
+    return () => {
+      disconnectSocket();
+    };
   }, []);
 
   const handleLogin = async (email: string, password: string) => {

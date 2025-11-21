@@ -1333,6 +1333,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userAgent: req.get('user-agent'),
       });
 
+      // Emit real-time update to all connected clients
+      const io = (app as any).io as SocketIOServer;
+      io.emit("gap:updated", {
+        gapId: gap.id,
+        gapNumber: gap.gapId,
+        status: gap.status,
+        action: "reopened",
+        by: user.name,
+        timestamp: new Date(),
+      });
+
       return res.json({ gap });
     } catch (error) {
       console.error("Reopen gap error:", error);
@@ -1581,6 +1592,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ccEmails.length > 0 ? ccEmails : undefined
         ).catch(console.error);
       }
+
+      // Emit real-time update to all connected clients
+      const io = (app as any).io as SocketIOServer;
+      io.emit("gap:updated", {
+        gapId: gap.id,
+        gapNumber: gap.gapId,
+        status: gap.status,
+        action: "resolved",
+        by: user.name,
+        timestamp: new Date(),
+      });
 
       return res.json({ gap });
     } catch (error) {
