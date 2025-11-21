@@ -177,7 +177,7 @@ export default function SopManagementPage() {
       title: formData.title,
       description: formData.description,
       content: formData.content,
-      parentSopId: formData.parentSopId && formData.parentSopId !== "none" ? parseInt(formData.parentSopId) : null,
+      parentSopId: formData.parentSopId && formData.parentSopId !== "none" && formData.parentSopId !== "" ? parseInt(formData.parentSopId) : null,
     };
 
     if (editingSop) {
@@ -517,7 +517,7 @@ export default function SopManagementPage() {
                     <SelectValue placeholder="Select a root SOP as parent for sub-SOP" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None (Create Root SOP)</SelectItem>
+                    <SelectItem value="none">None (Create Root SOP)</SelectItem>
                     {rootSops.map(sop => (
                       <SelectItem key={sop.id} value={sop.id.toString()}>
                         {sop.sopId} - {sop.title}
