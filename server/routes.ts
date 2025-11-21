@@ -1760,6 +1760,10 @@ RESPONSE FORMAT (valid JSON only):
 
       console.log("[AI Search] Calling OpenRouter API with question:", question.substring(0, 50));
       
+      // Use openai/gpt-4-turbo as default - it's most reliable on OpenRouter
+      const model = process.env.OPENROUTER_MODEL || "openai/gpt-4-turbo";
+      console.log("[AI Search] Using model:", model);
+      
       const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -1769,7 +1773,7 @@ RESPONSE FORMAT (valid JSON only):
           "X-Title": "SolvExtra GO",
         },
         body: JSON.stringify({
-          model: process.env.OPENROUTER_MODEL || "google/gemini-flash-1.5",
+          model: model,
           messages: [
             { role: "system", content: "You are a helpful assistant that finds relevant SOPs. Respond ONLY with valid JSON." },
             { role: "user", content: aiPrompt }
