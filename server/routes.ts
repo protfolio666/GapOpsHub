@@ -2669,5 +2669,145 @@ RESPONSE FORMAT (valid JSON only):
     }
   });
 
+  // ==================== NOTIFICATION PREFERENCES ====================
+
+  app.get("/api/notification-preferences", requireAuth, async (req, res) => {
+    try {
+      const prefs = await storage.getNotificationPreferences(req.session.userId!);
+      
+      // If no preferences exist, create default ones
+      if (!prefs) {
+        const defaultPrefs = await storage.createNotificationPreferences({
+          userId: req.session.userId!,
+          frequency: "immediate",
+          channels: "both",
+          notifyGapAssigned: true,
+          notifyGapResolved: true,
+          notifyComment: true,
+          notifyTatExtension: true,
+          notifyOverdueGap: true,
+          enabled: true
+        });
+        return res.json({ preferences: defaultPrefs });
+      }
+      
+      res.json({ preferences: prefs });
+    } catch (error) {
+      console.error("Get notification preferences error:", error);
+      res.status(500).json({ message: "Failed to get notification preferences" });
+    }
+  });
+
+  app.patch("/api/notification-preferences", requireAuth, async (req, res) => {
+    try {
+      const { frequency, channels, notifyGapAssigned, notifyGapResolved, notifyComment, notifyTatExtension, notifyOverdueGap, enabled } = req.body;
+      
+      const updates: any = {};
+      if (frequency) updates.frequency = frequency;
+      if (channels) updates.channels = channels;
+      if (notifyGapAssigned !== undefined) updates.notifyGapAssigned = notifyGapAssigned;
+      if (notifyGapResolved !== undefined) updates.notifyGapResolved = notifyGapResolved;
+      if (notifyComment !== undefined) updates.notifyComment = notifyComment;
+      if (notifyTatExtension !== undefined) updates.notifyTatExtension = notifyTatExtension;
+      if (notifyOverdueGap !== undefined) updates.notifyOverdueGap = notifyOverdueGap;
+      if (enabled !== undefined) updates.enabled = enabled;
+
+      const updated = await storage.updateNotificationPreferences(req.session.userId!, updates);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Preferences not found" });
+      }
+
+      // Audit log
+      await storage.createAuditLog({
+        userId: req.session.userId,
+        action: "UPDATE",
+        entityType: "notification_preferences",
+        entityId: updated.id,
+        changes: updates,
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
+      res.json({ preferences: updated });
+    } catch (error) {
+      console.error("Update notification preferences error:", error);
+      res.status(500).json({ message: "Failed to update notification preferences" });
+    }
+  });
+
+  // ==================== RECURRING GAP PATTERNS ====================
+
+  app.get("/api/recurring-gaps", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) return res.status(401).json({ message: "User not found" });
+
+      let patterns: any[];
+
+      if (user.role === "Admin" || user.role === "Management") {
+        patterns = await storage.getRecurringGapPatterns();
+      } else if (user.department) {
+        patterns = await storage.getRecurringGapPatternsByDepartment(user.department);
+      } else {
+        patterns = [];
+      }
+
+      res.json({ patterns });
+    } catch (error) {
+      console.error("Get recurring gaps error:", error);
+      res.status(500).json({ message: "Failed to get recurring gap patterns" });
+    }
+  });
+
+  app.get("/api/recurring-gaps/systemic", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || (user.role !== "Admin" && user.role !== "Management")) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const patterns = await storage.getSystemicGapPatterns();
+      res.json({ patterns });
+    } catch (error) {
+      console.error("Get systemic gaps error:", error);
+      res.status(500).json({ message: "Failed to get systemic gap patterns" });
+    }
+  });
+
+  app.patch("/api/recurring-gaps/:id/flag-systemic", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user || (user.role !== "Admin" && user.role !== "Management")) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const { severity, suggestedAction } = req.body;
+      const patternId = parseInt(req.params.id);
+
+      const updated = await storage.flagGapPatternAsSystemic(patternId, severity, suggestedAction);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Pattern not found" });
+      }
+
+      // Audit log
+      await storage.createAuditLog({
+        userId: req.session.userId,
+        action: "UPDATE",
+        entityType: "recurring_gap_pattern",
+        entityId: patternId,
+        changes: { severity, suggestedAction, flagged: true },
+        ipAddress: req.ip,
+        userAgent: req.get("user-agent")
+      });
+
+      res.json({ pattern: updated });
+    } catch (error) {
+      console.error("Flag systemic gap error:", error);
+      res.status(500).json({ message: "Failed to flag pattern as systemic" });
+    }
+  });
+
   return httpServer;
 }
