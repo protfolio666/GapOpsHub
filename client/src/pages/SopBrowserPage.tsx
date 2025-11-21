@@ -28,12 +28,12 @@ export default function SopBrowserPage() {
 
   const { data: sopsResponse, isLoading, isError } = useQuery({
     queryKey: ["/api/sops"],
-    queryFn: () => apiRequest("/api/sops", { method: "GET" }) as Promise<{ sops: SopItem[] }>,
+    queryFn: () => apiRequest("GET", "/api/sops") as Promise<{ sops: SopItem[] }>,
   });
 
   const { data: searchResults, isFetching: isSearching } = useQuery({
     queryKey: ["/api/sops/search", searchQuery],
-    queryFn: () => apiRequest("/api/sops/search", { method: "POST", body: { query: searchQuery } }),
+    queryFn: () => apiRequest("POST", "/api/sops/search", { query: searchQuery }),
     enabled: searchQuery.trim().length > 0,
   });
 

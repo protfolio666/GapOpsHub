@@ -45,11 +45,11 @@ export default function SopManagementPage() {
 
   const { data: sopsResponse, isLoading } = useQuery({
     queryKey: ["/api/sops"],
-    queryFn: () => apiRequest("/api/sops", { method: "GET" }) as Promise<{ sops: Sop[] }>,
+    queryFn: () => apiRequest("GET", "/api/sops") as Promise<{ sops: Sop[] }>,
   });
 
   const createSopMutation = useMutation({
-    mutationFn: (data: any) => apiRequest("/api/sops", { method: "POST", body: data }),
+    mutationFn: (data: any) => apiRequest("POST", "/api/sops", data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sops"] });
       toast({ title: "SOP created successfully" });
@@ -68,7 +68,7 @@ export default function SopManagementPage() {
 
   const updateSopMutation = useMutation({
     mutationFn: (data: any) => 
-      apiRequest(`/api/sops/${editingSop?.id}`, { method: "PATCH", body: data }),
+      apiRequest("PATCH", `/api/sops/${editingSop?.id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sops"] });
       toast({ title: "SOP updated successfully" });
@@ -86,7 +86,7 @@ export default function SopManagementPage() {
   });
 
   const deleteSopMutation = useMutation({
-    mutationFn: (sopId: number) => apiRequest(`/api/sops/${sopId}`, { method: "DELETE" }),
+    mutationFn: (sopId: number) => apiRequest("DELETE", `/api/sops/${sopId}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/sops"] });
       toast({ title: "SOP deleted successfully" });
