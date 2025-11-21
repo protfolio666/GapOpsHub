@@ -181,8 +181,6 @@ function App() {
       try {
         const response = await authApi.getMe();
         setUser(response.user);
-        // Initialize socket after authentication
-        initializeSocket();
       } catch (error) {
         // Not logged in, that's okay
       } finally {
@@ -191,12 +189,18 @@ function App() {
     };
 
     checkAuth();
-
-    // Cleanup socket on unmount
-    return () => {
-      disconnectSocket();
-    };
   }, []);
+
+  // Initialize socket whenever user is set
+  useEffect(() => {
+    if (user) {
+      console.log("User authenticated, initializing socket...");
+      initializeSocket();
+    }
+    return () => {
+      // Don't disconnect on unmount, keep connection alive
+    };
+  }, [user]);
 
   const handleLogin = async (email: string, password: string) => {
     try {

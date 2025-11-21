@@ -4,18 +4,25 @@ import { queryClient } from "./queryClient";
 let socket: Socket | null = null;
 
 export function initializeSocket() {
-  if (socket) {
-    console.log("✅ Socket already initialized");
+  if (socket && socket.connected) {
+    console.log("✅ Socket already connected");
     return socket;
   }
 
-  console.log("🔌 Initializing socket connection...");
+  if (socket) {
+    console.log("🔄 Reconnecting existing socket...");
+    socket.connect();
+    return socket;
+  }
+
+  console.log("🔌 Initializing new socket connection...");
   socket = ioClient(window.location.origin, {
     withCredentials: true,
     reconnection: true,
     reconnectionDelay: 1000,
     reconnectionDelayMax: 5000,
-    reconnectionAttempts: 5,
+    reconnectionAttempts: Infinity,
+    forceNew: false,
   });
 
   socket.on("connect", () => {
@@ -54,8 +61,11 @@ export function initializeSocket() {
     console.error("❌ Socket connection error:", error);
   });
 
-  socket.on("disconnect", () => {
-    console.log("❌ Socket disconnected");
+  socket.on("disconnect", (reason) => {
+    console.log("⚠️ Socket disconnected:", reason);
+    if (reason === "io server disconnect") {
+      socket?.connect();
+    }
   });
 
   return socket;
