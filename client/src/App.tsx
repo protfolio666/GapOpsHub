@@ -24,6 +24,7 @@ import TATExtensionsPage from "@/pages/TATExtensionsPage";
 import POCPerformancePage from "@/pages/POCPerformancePage";
 import SopBrowserPage from "@/pages/SopBrowserPage";
 import SopManagementPage from "@/pages/SopManagementPage";
+import AiSopSearchPage from "@/pages/AiSopSearchPage";
 import NotFound from "@/pages/not-found";
 import type { PublicUser } from "@shared/schema";
 import { authApi } from "@/lib/api";
@@ -138,6 +139,10 @@ function Router({ user }: { user: PublicUser }) {
       
       <Route path="/sops">
         <ProtectedRoute user={user} allowedRoles={["Admin", "Management", "QA/Ops", "POC"]} component={SopBrowserPage} />
+      </Route>
+
+      <Route path="/ai-sop-search">
+        <ProtectedRoute user={user} allowedRoles={["Admin", "Management", "QA/Ops", "POC"]} component={AiSopSearchPage} />
       </Route>
       
       <Route path="/admin/gaps/:id" component={GapDetailPage} />

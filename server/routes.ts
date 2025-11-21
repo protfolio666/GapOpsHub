@@ -1710,6 +1710,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/sops/ai-search", requireAuth, async (req, res) => {
+    try {
+      const { question } = req.body;
+
+      if (!question || !question.trim()) {
+        return res.status(400).json({ message: "Question is required" });
+      }
+
+      // Get all SOPs for RAG
+      const allSops = await storage.getAllSops();
+      
+      if (allSops.length === 0) {
+        return res.json({ 
+          recommendations: [],
+          reasoning: "No SOPs available in the system yet."
+        });
+      }
+
+      // Use OpenRouter for AI-powered search
+      const openrouterKey = process.env.OPENROUTER_API_KEY;
+      if (!openrouterKey) {
+        // Fallback to basic text search if no AI available
+        const results = await storage.searchSops(question);
+        const recommendations = results.slice(0, 3).map(sop => ({
+          sopId: sop.sopId,
+          title: sop.title,
+          relevance: 60,
+          content: sop.content,
+          reasoning: "Based on keyword matching"
+        }));
+        return res.json({ 
+          recommendations,
+          reasoning: "Using basic search (AI not available)"
+        });
+      }
+
+      // Create context for AI
+      const sopContext = allSops
+        .map(s => `SOP: ${s.sopId} - ${s.title}\nDescription: ${s.description}\nContent: ${s.content.substring(0, 200)}...`)
+        .join("\n\n");
+
+      const aiPrompt = `You are an expert at finding relevant Standard Operating Procedures (SOPs).
+
+Available SOPs:
+${sopContext}
+
+User's Issue/Question: ${question}
+
+Task: Identify the top 3 most relevant SOPs for this issue. For each SOP, provide:
+1. The SOP ID and Title
+2. A relevance score (0-100)
+3. Brief reasoning for why this SOP is relevant
+4. The most relevant section from the SOP
+
+Format your response as JSON:
+{
+  "recommendations": [
+    {
+      "sopId": "SOP-001",
+      "title": "SOP Title",
+      "relevance": 95,
+      "content": "Most relevant section",
+      "reasoning": "Why this is relevant"
+    }
+  ],
+  "reasoning": "Overall analysis of the issue"
+}`;
+
+      const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${openrouterKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: "gpt-4-turbo",
+          messages: [
+            { role: "user", content: aiPrompt }
+          ],
+          temperature: 0.7,
+        }),
+      });
+
+      if (!aiResponse.ok) {
+        // Fallback to basic search
+        const results = await storage.searchSops(question);
+        const recommendations = results.slice(0, 3).map(sop => ({
+          sopId: sop.sopId,
+          title: sop.title,
+          relevance: 60,
+          content: sop.content,
+          reasoning: "Based on text search"
+        }));
+        return res.json({ 
+          recommendations,
+          reasoning: "Using text-based search (AI unavailable)"
+        });
+      }
+
+      const aiData = await aiResponse.json();
+      const aiContent = aiData.choices?.[0]?.message?.content;
+      
+      if (!aiContent) {
+        throw new Error("Invalid AI response");
+      }
+
+      // Parse AI response
+      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+      const parsedResponse = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+
+      if (!parsedResponse || !Array.isArray(parsedResponse.recommendations)) {
+        throw new Error("Could not parse AI response");
+      }
+
+      return res.json({
+        recommendations: parsedResponse.recommendations,
+        reasoning: parsedResponse.reasoning || "AI analysis"
+      });
+    } catch (error) {
+      console.error("AI SOP search error:", error);
+      return res.status(500).json({ message: "Failed to search SOPs with AI" });
+    }
+  });
+
   // ==================== FORM TEMPLATE ROUTES ====================
   
   // All authenticated users can view templates
