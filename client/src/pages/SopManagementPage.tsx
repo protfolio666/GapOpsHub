@@ -266,7 +266,7 @@ export default function SopManagementPage() {
             >
               <Trash2 className="w-4 h-4" />
             </Button>
-            {hasChildren && (
+            {!sop.parentSopId && (
               <Button
                 size="icon"
                 variant="ghost"
