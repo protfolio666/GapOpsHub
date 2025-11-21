@@ -37,7 +37,16 @@ export async function authenticateUser(email: string, password: string): Promise
     console.log(`[AUTH] Hash length: ${user.passwordHash.length}`);
     console.log(`[AUTH] Hash starts with: ${user.passwordHash.substring(0, 7)}`);
     
-    const isValid = await bcrypt.compare(password, user.passwordHash);
+    let isValid = false;
+    
+    // Check if password is stored as bcrypt hash (60 chars, starts with $2a$, $2b$, or $2y$)
+    if (user.passwordHash.length === 60 && /^\$2[aby]\$/.test(user.passwordHash)) {
+      // Use bcrypt comparison for hashed passwords
+      isValid = await bcrypt.compare(password, user.passwordHash);
+    } else {
+      // Direct comparison for plain text passwords (legacy support)
+      isValid = password === user.passwordHash;
+    }
     
     console.log(`[AUTH] Password valid: ${isValid}`);
     
