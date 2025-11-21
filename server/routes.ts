@@ -2386,6 +2386,133 @@ RESPONSE FORMAT (valid JSON only):
     }
   });
 
+  // Get notifications for current user
+  app.get("/api/notifications", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      const notifications = [];
+
+      // Get gaps assigned to this user
+      if (user.role !== "Admin") {
+        const assignedGaps = await storage.getGapsByAssignee(user.id);
+        for (const gap of assignedGaps.slice(0, 10)) {
+          const reporter = await storage.getUser(gap.reporterId);
+          notifications.push({
+            id: `assigned-${gap.id}`,
+            title: "Gap Assigned",
+            message: `You have been assigned to gap ${gap.gapId}: ${gap.title}`,
+            timestamp: gap.assignedAt ? new Date(gap.assignedAt).toLocaleDateString() : "Recently",
+            type: "assignment",
+            isRead: false,
+            gapId: gap.gapId,
+            gapTitle: gap.title,
+          });
+        }
+
+        // Get gaps where user is a POC
+        const pocGaps = await (storage as any).getGapsByPoc?.(user.id) || [];
+        for (const gap of pocGaps.slice(0, 5)) {
+          if (!assignedGaps.find(g => g.id === gap.id)) {
+            notifications.push({
+              id: `poc-${gap.id}`,
+              title: "POC Assignment",
+              message: `You are a POC for gap ${gap.gapId}: ${gap.title}`,
+              timestamp: gap.createdAt ? new Date(gap.createdAt).toLocaleDateString() : "Recently",
+              type: "assignment",
+              isRead: false,
+              gapId: gap.gapId,
+              gapTitle: gap.title,
+            });
+          }
+        }
+
+        // Get recent comments on user's gaps
+        const userGaps = await storage.getGapsByAssignee(user.id);
+        for (const gap of userGaps.slice(0, 5)) {
+          const comments = await storage.getCommentsByGap(gap.id);
+          if (comments.length > 0) {
+            const lastComment = comments[comments.length - 1];
+            const author = await storage.getUser(lastComment.authorId);
+            notifications.push({
+              id: `comment-${lastComment.id}`,
+              title: "New Comment",
+              message: `${author?.name} commented on gap ${gap.gapId}`,
+              timestamp: new Date(lastComment.createdAt).toLocaleDateString(),
+              type: "status",
+              isRead: false,
+              gapId: gap.gapId,
+              gapTitle: gap.title,
+            });
+          }
+        }
+
+        // Get TAT extensions
+        const extensions = await storage.getPendingExtensions();
+        for (const ext of extensions.filter(e => e.userId === user.id).slice(0, 5)) {
+          const gap = await storage.getGap(ext.gapId);
+          notifications.push({
+            id: `tat-${ext.id}`,
+            title: "TAT Extension Request",
+            message: `TAT extension requested for gap ${gap?.gapId}: ${gap?.title}`,
+            timestamp: new Date(ext.requestedAt).toLocaleDateString(),
+            type: "tat",
+            isRead: false,
+            gapId: gap?.gapId,
+            gapTitle: gap?.title,
+          });
+        }
+      }
+
+      // Sort by most recent and limit to 50
+      const sorted = notifications
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+        .slice(0, 50);
+
+      return res.json(sorted);
+    } catch (error) {
+      console.error("Get notifications error:", error);
+      return res.status(500).json({ message: "Failed to get notifications" });
+    }
+  });
+
+  // Get unread notifications count
+  app.get("/api/notifications/count", requireAuth, async (req, res) => {
+    try {
+      const user = await storage.getUser(req.session.userId!);
+      if (!user) {
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // Count unread notifications (assigned gaps, pending TAT extensions, etc.)
+      let count = 0;
+
+      // Count assigned gaps
+      const assignedGaps = await storage.getGapsByAssignee(user.id);
+      count += assignedGaps.filter(g => g.status !== "Resolved" && g.status !== "Closed").length;
+
+      // Count TAT extensions
+      const extensions = await storage.getPendingExtensions();
+      count += extensions.filter(e => e.userId === user.id).length;
+
+      // Count recent comments (last 24 hours)
+      const userGaps = await storage.getGapsByAssignee(user.id);
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      for (const gap of userGaps) {
+        const comments = await storage.getCommentsByGap(gap.id);
+        count += comments.filter(c => new Date(c.createdAt) > oneDayAgo).length;
+      }
+
+      return res.json({ count: Math.min(count, 99) }); // Cap at 99 for display
+    } catch (error) {
+      console.error("Get notifications count error:", error);
+      return res.status(500).json({ count: 0 });
+    }
+  });
+
   // Export gaps to Excel with RBAC
   app.get("/api/reports/export", requireAuth, async (req, res) => {
     try {

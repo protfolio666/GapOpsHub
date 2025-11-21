@@ -4,14 +4,13 @@ import { Bell, Moon, Sun } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { useUnreadNotificationCount } from "@/hooks/useNotifications";
 
-interface HeaderProps {
-  notificationCount?: number;
-}
-
-export default function Header({ notificationCount = 0 }: HeaderProps) {
+export default function Header() {
   const [darkMode, setDarkMode] = useState(false);
   const [, setLocation] = useLocation();
+  const { data: countData } = useUnreadNotificationCount();
+  const notificationCount = countData?.count || 0;
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);

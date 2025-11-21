@@ -1,47 +1,23 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bell, ArrowLeft, Trash2, Mail, ChevronDown } from "lucide-react";
+import { Bell, ArrowLeft, Trash2, Mail, ChevronDown, Loader2 } from "lucide-react";
 import { useLocation } from "wouter";
-import { useState } from "react";
-
-interface Notification {
-  id: number;
-  title: string;
-  message: string;
-  timestamp: string;
-  type: string;
-  isRead: boolean;
-}
+import { useState, useMemo } from "react";
+import { useNotifications } from "@/hooks/useNotifications";
 
 export default function NotificationsPage() {
   const [, setLocation] = useLocation();
   const [showAllNotifications, setShowAllNotifications] = useState(false);
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: 1,
-      title: "Gap Assigned",
-      message: "You have been assigned to gap GAP-0001: System Downtime",
-      timestamp: "2 hours ago",
-      type: "assignment",
-      isRead: false
-    },
-    {
-      id: 2,
-      title: "Gap Status Updated",
-      message: "Gap GAP-0002 has been marked as In Progress",
-      timestamp: "4 hours ago",
-      type: "status",
-      isRead: false
-    },
-    {
-      id: 3,
-      title: "TAT Extension Approved",
-      message: "Your TAT extension request for GAP-0001 has been approved",
-      timestamp: "1 day ago",
-      type: "tat",
-      isRead: true
-    },
-  ]);
+  const [readNotificationIds, setReadNotificationIds] = useState<Set<string>>(new Set());
+  const { data: apiNotifications = [], isLoading } = useNotifications();
+
+  // Merge API notifications with read status
+  const notifications = useMemo(() => {
+    return apiNotifications.map((n: any) => ({
+      ...n,
+      isRead: readNotificationIds.has(n.id),
+    }));
+  }, [apiNotifications, readNotificationIds]);
 
   const handleMarkAsUnread = (id: number) => {
     setNotifications(notifications.map(n => 
