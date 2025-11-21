@@ -330,25 +330,25 @@ export class DatabaseStorage implements IStorage {
     
     // Template filter
     if (filters.templateIds && filters.templateIds.length > 0) {
-      conditions.push(sql`${gaps.formTemplateId} = ANY(${filters.templateIds})`);
+      conditions.push(inArray(gaps.formTemplateId, filters.templateIds));
     }
     
     // Status filter
     if (filters.statuses && filters.statuses.length > 0) {
-      conditions.push(sql`${gaps.status} = ANY(${filters.statuses})`);
+      conditions.push(inArray(gaps.status, filters.statuses));
     }
     
     // Department filter
     if (filters.departments && filters.departments.length > 0) {
-      conditions.push(sql`${gaps.department} = ANY(${filters.departments})`);
+      conditions.push(inArray(gaps.department, filters.departments));
     }
     
     // User-based filters (reporter or assignee)
     if (filters.userIds && filters.userIds.length > 0) {
       conditions.push(
         or(
-          sql`${gaps.reporterId} = ANY(${filters.userIds})`,
-          sql`${gaps.assignedToId} = ANY(${filters.userIds})`
+          inArray(gaps.reporterId, filters.userIds),
+          inArray(gaps.assignedToId, filters.userIds)
         )
       );
     }
@@ -359,13 +359,13 @@ export class DatabaseStorage implements IStorage {
       const userConditions = [];
       
       if (filters.roles && filters.roles.length > 0) {
-        userConditions.push(sql`${users.role} = ANY(${filters.roles})`);
+        userConditions.push(inArray(users.role, filters.roles));
       }
       if (filters.employeeIds && filters.employeeIds.length > 0) {
-        userConditions.push(sql`${users.employeeId} = ANY(${filters.employeeIds})`);
+        userConditions.push(inArray(users.employeeId, filters.employeeIds));
       }
       if (filters.emails && filters.emails.length > 0) {
-        userConditions.push(sql`${users.email} = ANY(${filters.emails})`);
+        userConditions.push(inArray(users.email, filters.emails));
       }
       
       // Get user IDs matching these criteria
