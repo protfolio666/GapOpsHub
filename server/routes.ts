@@ -1801,6 +1801,52 @@ RESPONSE FORMAT (valid JSON only):
       if (!aiResponse.ok) {
         const errorText = await aiResponse.text();
         console.error("[AI Search] OpenRouter error:", errorText);
+        
+        // If configured model failed, try with paid GPT-4 model as fallback
+        if (model !== "openai/gpt-4-turbo") {
+          console.log("[AI Search] Configured model failed, retrying with openai/gpt-4-turbo...");
+          try {
+            const retryResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+              method: "POST",
+              headers: {
+                "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://solvextra.com",
+                "X-Title": "SolvExtra GO",
+              },
+              body: JSON.stringify({
+                model: "openai/gpt-4-turbo",
+                messages: [
+                  { role: "system", content: "You are a helpful assistant that finds relevant SOPs. Respond ONLY with valid JSON." },
+                  { role: "user", content: aiPrompt }
+                ],
+                temperature: 0.3,
+                top_p: 0.9,
+              }),
+            });
+            
+            if (retryResponse.ok) {
+              const retryData = await retryResponse.json();
+              const retryContent = retryData.choices?.[0]?.message?.content;
+              if (retryContent) {
+                const jsonMatch = retryContent.match(/\{[\s\S]*\}/);
+                if (jsonMatch) {
+                  const parsedResponse = JSON.parse(jsonMatch[0]);
+                  if (parsedResponse.recommendations && Array.isArray(parsedResponse.recommendations)) {
+                    console.log("[AI Search] Retry succeeded with GPT-4");
+                    return res.json({
+                      recommendations: parsedResponse.recommendations,
+                      reasoning: parsedResponse.reasoning || "AI analysis complete"
+                    });
+                  }
+                }
+              }
+            }
+          } catch (retryError) {
+            console.error("[AI Search] Retry with GPT-4 also failed:", retryError);
+          }
+        }
+        
         // Fallback to basic text search
         const results = await storage.searchSops(question);
         const recommendations = results.slice(0, 3).map(sop => ({
