@@ -1730,7 +1730,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Use OpenRouter for AI-powered search
       const openrouterKey = process.env.OPENROUTER_API_KEY;
+      console.log("[AI Search] OpenRouter Key available:", !!openrouterKey);
+      
       if (!openrouterKey) {
+        console.log("[AI Search] No OpenRouter key - using fallback");
         // Fallback to basic text search if no AI available
         const results = await storage.searchSops(question);
         const recommendations = results.slice(0, 3).map(sop => ({
@@ -1778,11 +1781,13 @@ Format your response as JSON:
   "reasoning": "Overall analysis of the issue"
 }`;
 
+      console.log("[AI Search] Calling OpenRouter API...");
       const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${openrouterKey}`,
           "Content-Type": "application/json",
+          "HTTP-Referer": "https://solvextra.com",
         },
         body: JSON.stringify({
           model: "gpt-4-turbo",
@@ -1793,7 +1798,11 @@ Format your response as JSON:
         }),
       });
 
+      console.log("[AI Search] OpenRouter response status:", aiResponse.status);
+
       if (!aiResponse.ok) {
+        const errorText = await aiResponse.text();
+        console.error("[AI Search] OpenRouter error response:", errorText);
         // Fallback to basic search
         const results = await storage.searchSops(question);
         const recommendations = results.slice(0, 3).map(sop => ({
@@ -1810,9 +1819,12 @@ Format your response as JSON:
       }
 
       const aiData = await aiResponse.json();
+      console.log("[AI Search] OpenRouter response received");
+      
       const aiContent = aiData.choices?.[0]?.message?.content;
       
       if (!aiContent) {
+        console.error("[AI Search] No content in AI response:", aiData);
         throw new Error("Invalid AI response");
       }
 
@@ -1821,9 +1833,11 @@ Format your response as JSON:
       const parsedResponse = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
 
       if (!parsedResponse || !Array.isArray(parsedResponse.recommendations)) {
+        console.error("[AI Search] Could not parse AI response:", aiContent);
         throw new Error("Could not parse AI response");
       }
 
+      console.log("[AI Search] Successfully parsed recommendations:", parsedResponse.recommendations.length);
       return res.json({
         recommendations: parsedResponse.recommendations,
         reasoning: parsedResponse.reasoning || "AI analysis"
