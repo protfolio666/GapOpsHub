@@ -628,19 +628,68 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createSop(sop: InsertSop): Promise<Sop> {
-    // Generate SOP ID
-    const count = await db.select({ count: sql<number>`count(*)` }).from(sops);
-    const sopNumber = (Number(count[0].count) + 1).toString().padStart(3, '0');
-    const sopId = `SOP-${sopNumber}`;
+    // Generate hierarchical SOP ID
+    let sopId: string;
+    
+    if (sop.parentSopId) {
+      // For child SOPs: get parent SOP and count existing children
+      const parentSop = await this.getSop(sop.parentSopId);
+      if (!parentSop) {
+        throw new Error("Parent SOP not found");
+      }
+      
+      // Count children of this parent
+      const childCount = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(sops)
+        .where(eq(sops.parentSopId, sop.parentSopId));
+      
+      const childNumber = (Number(childCount[0].count) + 1).toString().padStart(2, '0');
+      sopId = `${parentSop.sopId}-#${childNumber}`;
+    } else {
+      // For root SOPs: generate standard numbering
+      const count = await db.select({ count: sql<number>`count(*)` }).from(sops).where(sql`${sops.parentSopId} IS NULL`);
+      const sopNumber = (Number(count[0].count) + 1).toString().padStart(3, '0');
+      sopId = `SOP-${sopNumber}`;
+    }
     
     const [newSop] = await db.insert(sops).values({ ...sop, sopId }).returning();
     return newSop;
   }
 
   async updateSop(id: number, sop: Partial<InsertSop>): Promise<Sop | undefined> {
+    // If parentSopId is being changed, regenerate sopId
+    let updateData: any = { ...sop, updatedAt: new Date() };
+    
+    if (sop.parentSopId !== undefined) {
+      const currentSop = await this.getSop(id);
+      if (currentSop && currentSop.parentSopId !== sop.parentSopId) {
+        // Parent is being changed, regenerate ID
+        if (sop.parentSopId) {
+          const parentSop = await this.getSop(sop.parentSopId);
+          if (!parentSop) {
+            throw new Error("Parent SOP not found");
+          }
+          
+          const childCount = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(sops)
+            .where(eq(sops.parentSopId, sop.parentSopId));
+          
+          const childNumber = (Number(childCount[0].count) + 1).toString().padStart(2, '0');
+          updateData.sopId = `${parentSop.sopId}-#${childNumber}`;
+        } else {
+          // Moving from child to root - assign new root SOP ID
+          const count = await db.select({ count: sql<number>`count(*)` }).from(sops).where(sql`${sops.parentSopId} IS NULL`);
+          const sopNumber = (Number(count[0].count) + 1).toString().padStart(3, '0');
+          updateData.sopId = `SOP-${sopNumber}`;
+        }
+      }
+    }
+    
     const [updatedSop] = await db
       .update(sops)
-      .set({ ...sop, updatedAt: new Date() })
+      .set(updateData)
       .where(eq(sops.id, id))
       .returning();
     return updatedSop;
