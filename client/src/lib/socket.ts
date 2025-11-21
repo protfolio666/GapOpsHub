@@ -48,6 +48,11 @@ export function initializeSocket() {
                keyStr.includes('/api/overdue');
       }
     });
+
+    // Force refetch for reports with any applied filters
+    queryClient.refetchQueries({ 
+      predicate: (query) => String(query.queryKey).includes('/api/reports/gaps')
+    });
   });
 
   // Listen for comment updates

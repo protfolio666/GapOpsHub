@@ -112,6 +112,7 @@ export default function ReportsPage() {
 
   const handleClearFilters = () => {
     setFilters({});
+    setHasAppliedFilters(false);
   };
 
   const handleExport = async () => {
