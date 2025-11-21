@@ -1655,7 +1655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch("/api/sops/:id", requireRole("Management", "Admin"), async (req, res) => {
     try {
-      const { title, description, content, category, department, version, parentSopId } = req.body;
+      const { title, description, content, category, department, version, parentSopId, active } = req.body;
       
       const updateData: any = {
         ...(title && { title }),
@@ -1665,6 +1665,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ...(department !== undefined && { department }),
         ...(version && { version }),
         ...(parentSopId !== undefined && { parentSopId }),
+        ...(active !== undefined && { active }),
         updatedById: req.session.userId!,
       };
 
