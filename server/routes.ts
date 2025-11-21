@@ -977,16 +977,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Log assignment
       await logGapAssignment(req.session.userId!, gap.id, assignedToId, req);
 
-      // Send email notification to assignee
+      // Send email notification to assignee with CC to all POCs
       const assignee = await storage.getUser(assignedToId);
       if (assignee) {
+        // Fetch all POCs for this gap to CC them
+        const pocs = await storage.getGapPocs(gap.id);
+        const ccEmails = pocs
+          .filter(poc => poc.userId !== assignedToId) // Don't CC the primary assignee
+          .map(poc => poc.user?.email || "")
+          .filter(email => email); // Remove empty emails
+        
         await sendGapAssignmentEmail(
           assignee.name,
           assignee.email,
           gap.gapId,
           gap.title,
           gap.priority,
-          gap.tatDeadline || undefined
+          gap.tatDeadline || undefined,
+          ccEmails.length > 0 ? ccEmails : undefined
         );
       }
 
@@ -1485,12 +1493,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const author = await storage.getUser(comment.authorId);
       const sanitizedAuthor = author ? sanitizeUser(author) : null;
 
-      // Emit real-time comment via WebSocket (sanitized)
+      // Emit real-time comment via WebSocket to all POCs (sanitized)
       const io = (app as any).io as SocketIOServer;
-      io.to(`gap-${req.params.gapId}`).emit("new-comment", {
+      const commentEvent = {
         ...comment,
         author: sanitizedAuthor,
-      });
+      };
+      
+      // Emit to all gap room subscribers
+      io.to(`gap-${req.params.gapId}`).emit("new-comment", commentEvent);
+      
+      // Also emit to notification system for all POCs
+      const pocs = await storage.getGapPocs(gapId);
+      for (const poc of pocs) {
+        io.to(`user-${poc.userId}`).emit("poc-comment-notification", {
+          gapId,
+          gapTitle: gap.title,
+          commentAuthor: sanitizedAuthor?.name || "Unknown",
+          comment: comment.content.substring(0, 100),
+          timestamp: new Date(),
+        });
+      }
 
       return res.json({ comment: { ...comment, author: sanitizedAuthor } });
     } catch (error) {
