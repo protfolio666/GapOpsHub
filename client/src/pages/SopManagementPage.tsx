@@ -21,6 +21,13 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface Sop {
   id: number;
@@ -502,12 +509,22 @@ export default function SopManagementPage() {
           </DialogHeader>
 
           <div className="space-y-4">
-            {formData.parentSopId && (
+            {!editingSop && rootSops.length > 0 && (
               <div>
-                <label className="text-sm font-medium">Parent SOP</label>
-                <div className="px-3 py-2 border border-input rounded-md bg-muted/50 text-sm">
-                  {sops.find(s => s.id === parseInt(formData.parentSopId))?.sopId} - {sops.find(s => s.id === parseInt(formData.parentSopId))?.title}
-                </div>
+                <label className="text-sm font-medium">Parent SOP (Optional)</label>
+                <Select value={formData.parentSopId} onValueChange={(value) => setFormData({ ...formData, parentSopId: value })}>
+                  <SelectTrigger data-testid="select-parent-sop">
+                    <SelectValue placeholder="Select a root SOP as parent for sub-SOP" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">None (Create Root SOP)</SelectItem>
+                    {rootSops.map(sop => (
+                      <SelectItem key={sop.id} value={sop.id.toString()}>
+                        {sop.sopId} - {sop.title}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
