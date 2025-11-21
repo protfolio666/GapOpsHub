@@ -22,6 +22,8 @@ import OverdueGapsPage from "@/pages/OverdueGapsPage";
 import ReportsPage from "@/pages/ReportsPage";
 import TATExtensionsPage from "@/pages/TATExtensionsPage";
 import POCPerformancePage from "@/pages/POCPerformancePage";
+import SopBrowserPage from "@/pages/SopBrowserPage";
+import SopManagementPage from "@/pages/SopManagementPage";
 import NotFound from "@/pages/not-found";
 import type { PublicUser } from "@shared/schema";
 import { authApi } from "@/lib/api";
@@ -124,6 +126,18 @@ function Router({ user }: { user: PublicUser }) {
       
       <Route path="/poc/performance">
         <ProtectedRoute user={user} allowedRoles={["POC"]} component={() => <POCPerformancePage isAdmin={false} />} />
+      </Route>
+      
+      <Route path="/admin/sops">
+        <ProtectedRoute user={user} allowedRoles={["Admin", "Management"]} component={SopManagementPage} />
+      </Route>
+      
+      <Route path="/management/sops">
+        <ProtectedRoute user={user} allowedRoles={["Admin", "Management"]} component={SopManagementPage} />
+      </Route>
+      
+      <Route path="/sops">
+        <ProtectedRoute user={user} allowedRoles={["Admin", "Management", "QA/Ops", "POC"]} component={SopBrowserPage} />
       </Route>
       
       <Route path="/admin/gaps/:id" component={GapDetailPage} />

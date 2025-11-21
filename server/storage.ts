@@ -646,6 +646,30 @@ export class DatabaseStorage implements IStorage {
     return updatedSop;
   }
 
+  async deleteSop(id: number): Promise<boolean> {
+    await db.delete(sops).where(eq(sops.id, id));
+    return true;
+  }
+
+  async getSopsByParent(parentSopId: number): Promise<Sop[]> {
+    return await db.select().from(sops).where(eq(sops.parentSopId, parentSopId)).orderBy(desc(sops.createdAt));
+  }
+
+  async searchSops(query: string): Promise<Sop[]> {
+    const searchTerm = `%${query}%`;
+    return await db
+      .select()
+      .from(sops)
+      .where(
+        or(
+          sql`title ILIKE ${searchTerm}`,
+          sql`description ILIKE ${searchTerm}`,
+          sql`content ILIKE ${searchTerm}`
+        )
+      )
+      .orderBy(desc(sops.createdAt));
+  }
+
   // Form Template operations
   async getFormTemplate(id: number): Promise<FormTemplate | undefined> {
     const [template] = await db.select().from(formTemplates).where(eq(formTemplates.id, id));
