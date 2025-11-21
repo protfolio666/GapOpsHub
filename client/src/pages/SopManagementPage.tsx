@@ -273,20 +273,18 @@ export default function SopManagementPage() {
             >
               <Trash2 className="w-4 h-4" />
             </Button>
-            {!sop.parentSopId && (
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => {
-                  setEditingSop(sop);
-                  handleOpenDialog(undefined, false);
-                }}
-                title="Add sub-SOP"
-                data-testid={`button-add-sub-sop-${sop.id}`}
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
-            )}
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => {
+                setEditingSop(sop);
+                handleOpenDialog(undefined, false);
+              }}
+              title="Add sub-SOP"
+              data-testid={`button-add-sub-sop-${sop.id}`}
+            >
+              <Plus className="w-4 h-4" />
+            </Button>
           </div>
         </div>
 
@@ -509,16 +507,16 @@ export default function SopManagementPage() {
           </DialogHeader>
 
           <div className="space-y-4">
-            {!editingSop && rootSops.length > 0 && (
+            {!editingSop && sops.length > 0 && (
               <div>
                 <label className="text-sm font-medium">Parent SOP (Optional)</label>
                 <Select value={formData.parentSopId} onValueChange={(value) => setFormData({ ...formData, parentSopId: value })}>
                   <SelectTrigger data-testid="select-parent-sop">
-                    <SelectValue placeholder="Select a root SOP as parent for sub-SOP" />
+                    <SelectValue placeholder="Select a SOP as parent for sub-SOP" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">None (Create Root SOP)</SelectItem>
-                    {rootSops.map(sop => (
+                    {sops.map(sop => (
                       <SelectItem key={sop.id} value={sop.id.toString()}>
                         {sop.sopId} - {sop.title}
                       </SelectItem>
