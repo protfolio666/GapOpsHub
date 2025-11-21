@@ -1760,8 +1760,21 @@ RESPONSE FORMAT (valid JSON only):
 
       console.log("[AI Search] Calling OpenRouter API with question:", question.substring(0, 50));
       
-      // Use openai/gpt-4-turbo as default - it's most reliable on OpenRouter
-      const model = process.env.OPENROUTER_MODEL || "openai/gpt-4-turbo";
+      // Read the model from settings file first, then fallback to env var
+      let model = "openai/gpt-4-turbo";
+      try {
+        const fsPromises = await import("fs/promises");
+        const pathModule = await import("path");
+        const settingsPath = pathModule.join(process.cwd(), "settings.json");
+        const settingsData = await fsPromises.readFile(settingsPath, "utf-8");
+        const settings = JSON.parse(settingsData);
+        if (settings.openrouterModel) {
+          model = settings.openrouterModel;
+        }
+      } catch (e) {
+        // Use env var or default if settings file doesn't exist
+        model = process.env.OPENROUTER_MODEL || "openai/gpt-4-turbo";
+      }
       console.log("[AI Search] Using model:", model);
       
       const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
@@ -2151,7 +2164,7 @@ RESPONSE FORMAT (valid JSON only):
         // Return default settings if file doesn't exist
         return res.json({
           settings: {
-            openrouterModel: process.env.OPENROUTER_MODEL || "google/gemini-flash-1.5",
+            openrouterModel: process.env.OPENROUTER_MODEL || "openai/gpt-4-turbo",
           }
         });
       }
