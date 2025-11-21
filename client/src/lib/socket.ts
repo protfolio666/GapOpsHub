@@ -12,18 +12,23 @@ export function initializeSocket() {
 
   // Listen for real-time gap updates and invalidate cache
   socket.on("gap:updated", (data: any) => {
-    console.log("Gap updated via socket:", data);
+    console.log("🔄 Gap updated via socket:", data);
     
-    // Invalidate all gap-related queries to trigger refetch
-    queryClient.invalidateQueries({ queryKey: ['/api/gaps'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/gaps', data.gapId] });
-    queryClient.invalidateQueries({ queryKey: ['/api/admin/gaps'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/management/gaps'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/poc/gaps'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/qa/gaps'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/reports'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
-    queryClient.invalidateQueries({ queryKey: ['/api/notifications/count'] });
+    // Invalidate all gap-related queries with broader matching
+    queryClient.invalidateQueries({ 
+      predicate: (query) => {
+        const key = query.queryKey;
+        const keyStr = String(key);
+        return keyStr.includes('/api/gaps') || 
+               keyStr.includes('/api/reports') || 
+               keyStr.includes('/api/admin') || 
+               keyStr.includes('/api/management') || 
+               keyStr.includes('/api/poc') || 
+               keyStr.includes('/api/qa') ||
+               keyStr.includes('/api/notifications') ||
+               keyStr.includes('/api/overdue');
+      }
+    });
   });
 
   // Listen for comment updates

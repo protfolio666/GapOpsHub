@@ -928,6 +928,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      // Emit real-time update
+      const io = (app as any).io as SocketIOServer;
+      io.emit("gap:updated", {
+        gapId: gap.id,
+        gapNumber: gap.gapId,
+        status: gap.status,
+        action: "updated",
+        timestamp: new Date(),
+      });
+
       return res.json({ gap });
     } catch (error) {
       console.error("Update gap error:", error);
@@ -997,6 +1007,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ccEmails.length > 0 ? ccEmails : undefined
         );
       }
+
+      // Emit real-time update
+      const io = (app as any).io as SocketIOServer;
+      io.emit("gap:updated", {
+        gapId: gap.id,
+        gapNumber: gap.gapId,
+        status: gap.status,
+        action: "assigned",
+        timestamp: new Date(),
+      });
 
       return res.json({ gap });
     } catch (error) {
