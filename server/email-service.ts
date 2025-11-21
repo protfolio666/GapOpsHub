@@ -4,6 +4,7 @@ const FROM_EMAIL = "contactus@solvextra.com"; // Verified sender in SendGrid
 
 interface EmailOptions {
   to: string;
+  cc?: string[];
   subject: string;
   text?: string;
   html?: string;
@@ -15,12 +16,13 @@ async function sendEmail(options: EmailOptions): Promise<boolean> {
     return false;
   }
 
-  console.log(`[Email] Preparing to send email to: ${options.to}, subject: "${options.subject}"`);
+  console.log(`[Email] Preparing to send email to: ${options.to}${options.cc?.length ? `, CC: ${options.cc.join(", ")}` : ""}, subject: "${options.subject}"`);
 
   try {
     const payload = {
       personalizations: [{
-        to: [{ email: options.to }]
+        to: [{ email: options.to }],
+        ...(options.cc && options.cc.length > 0 ? { cc: options.cc.map(email => ({ email })) } : {})
       }],
       from: { email: FROM_EMAIL },
       subject: options.subject,

@@ -742,14 +742,75 @@ export default function GapDetailPage() {
                   />
                 </>
               ) : (
-                <CommentThread 
-                  comments={comments}
-                  onAddComment={async (content, attachments) => {
-                    await addCommentMutation.mutateAsync({ content, attachments });
-                  }}
-                  isSubmitting={addCommentMutation.isPending}
-                  gapId={Number(gapId)}
-                />
+                <>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-sm font-medium">Discussion</h3>
+                    {userData?.user && gap.assignedToId && (["Admin", "Management"].includes(userData.user.role) || gap.assignedToId === userData.user.id || gapData.pocs.some(p => p.userId === userData.user.id && p.isPrimary)) && (
+                      <Dialog open={isAddPocDialogOpen} onOpenChange={setIsAddPocDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="ghost" size="sm" data-testid="button-add-poc-discussion">
+                            <UserPlus className="h-4 w-4 mr-2" />
+                            Add Team Member
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Add Team Member to Discussion</DialogTitle>
+                            <DialogDescription>
+                              Select a POC to add to this discussion. They will have full access to view, comment, and contribute to resolving this gap.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4 py-4">
+                            <div>
+                              <Label htmlFor="poc-select-discussion">Select POC</Label>
+                              <Select value={selectedPocId} onValueChange={setSelectedPocId}>
+                                <SelectTrigger id="poc-select-discussion" data-testid="select-poc-discussion">
+                                  <SelectValue placeholder="Choose a team member" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {pocUsersData?.users.filter(u => !gapData.pocs.some(p => p.userId === u.id)).map((user) => (
+                                    <SelectItem key={user.id} value={String(user.id)}>
+                                      {user.name} ({user.employeeId})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button 
+                              onClick={() => {
+                                if (selectedPocId) {
+                                  addPocMutation.mutate(Number(selectedPocId));
+                                  setSelectedPocId("");
+                                }
+                              }}
+                              disabled={addPocMutation.isPending || !selectedPocId}
+                              data-testid="button-confirm-add-poc-discussion"
+                            >
+                              {addPocMutation.isPending ? (
+                                <>
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                  Adding...
+                                </>
+                              ) : (
+                                "Add POC"
+                              )}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    )}
+                  </div>
+                  <CommentThread 
+                    comments={comments}
+                    onAddComment={async (content, attachments) => {
+                      await addCommentMutation.mutateAsync({ content, attachments });
+                    }}
+                    isSubmitting={addCommentMutation.isPending}
+                    gapId={Number(gapId)}
+                  />
+                </>
               )}
             </TabsContent>
           </Tabs>
