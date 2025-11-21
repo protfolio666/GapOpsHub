@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Pencil, Trash2, Plus, Loader2, ChevronRight, ChevronDown } from "lucide-react";
+import { Pencil, Trash2, Plus, Loader2, ChevronRight, ChevronDown, Send, BookOpen, AlertCircle, Eye, EyeOff } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -37,6 +37,8 @@ export default function SopManagementPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSop, setEditingSop] = useState<Sop | null>(null);
   const [expandedParents, setExpandedParents] = useState<Set<number>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -97,6 +99,38 @@ export default function SopManagementPage() {
       toast({ 
         title: "Failed to delete SOP", 
         description: error?.message || "Please try again",
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const toggleStatusMutation = useMutation({
+    mutationFn: (data: { sopId: number; active: boolean }) =>
+      apiRequest("PATCH", `/api/sops/${data.sopId}`, { active: data.active }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/sops"] });
+      toast({ title: "SOP status updated" });
+    },
+    onError: (error: any) => {
+      console.error("Toggle status error:", error);
+      toast({ 
+        title: "Failed to update status",
+        variant: "destructive"
+      });
+    },
+  });
+
+  const aiSearchMutation = useMutation({
+    mutationFn: (question: string) => 
+      apiRequest("POST", "/api/sops/ai-search", { question }),
+    onSuccess: (data: any) => {
+      setSearchResults(data);
+    },
+    onError: (error: any) => {
+      console.error("AI search error:", error);
+      toast({ 
+        title: "Search failed", 
+        description: error?.message || "Could not search SOPs",
         variant: "destructive" 
       });
     },
@@ -206,6 +240,19 @@ export default function SopManagementPage() {
             <Button
               size="icon"
               variant="ghost"
+              onClick={() => toggleStatusMutation.mutate({ sopId: sop.id, active: !sop.active })}
+              title={sop.active ? "Deactivate" : "Activate"}
+              data-testid={`button-toggle-status-${sop.id}`}
+            >
+              {sop.active ? (
+                <Eye className="w-4 h-4" />
+              ) : (
+                <EyeOff className="w-4 h-4" />
+              )}
+            </Button>
+            <Button
+              size="icon"
+              variant="ghost"
               onClick={() => handleOpenDialog(sop)}
               data-testid={`button-edit-sop-${sop.id}`}
             >
@@ -264,6 +311,7 @@ export default function SopManagementPage() {
         <TabsList>
           <TabsTrigger value="tree">Hierarchical View</TabsTrigger>
           <TabsTrigger value="all">All SOPs</TabsTrigger>
+          <TabsTrigger value="search">AI Search</TabsTrigger>
         </TabsList>
 
         <TabsContent value="tree" className="mt-4">
@@ -315,6 +363,19 @@ export default function SopManagementPage() {
                           <Button
                             size="icon"
                             variant="ghost"
+                            onClick={() => toggleStatusMutation.mutate({ sopId: sop.id, active: !sop.active })}
+                            title={sop.active ? "Deactivate" : "Activate"}
+                            data-testid={`button-toggle-table-${sop.id}`}
+                          >
+                            {sop.active ? (
+                              <Eye className="w-4 h-4" />
+                            ) : (
+                              <EyeOff className="w-4 h-4" />
+                            )}
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
                             onClick={() => handleOpenDialog(sop)}
                             data-testid={`button-edit-sop-table-${sop.id}`}
                           >
@@ -336,6 +397,101 @@ export default function SopManagementPage() {
               </table>
             </div>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="search" className="mt-4">
+          <Card className="p-6 space-y-4">
+            <div>
+              <label className="text-sm font-medium block mb-2">Search SOPs with AI</label>
+              <Textarea
+                placeholder="Describe your issue or question - AI will find relevant SOPs"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="min-h-24"
+                data-testid="textarea-admin-ai-search"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                onClick={() => aiSearchMutation.mutate(searchQuery)}
+                disabled={aiSearchMutation.isPending || !searchQuery.trim()}
+                className="gap-2"
+                data-testid="button-admin-search-sops"
+              >
+                {aiSearchMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Searching...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Search SOPs
+                  </>
+                )}
+              </Button>
+            </div>
+          </Card>
+
+          {searchResults && (
+            <div className="mt-4 space-y-4">
+              <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+                <div className="flex gap-2">
+                  <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-medium text-blue-900 dark:text-blue-100">AI Analysis</p>
+                    <p className="text-sm text-blue-700 dark:text-blue-200 mt-1">{searchResults.reasoning}</p>
+                  </div>
+                </div>
+              </div>
+
+              {searchResults.recommendations?.length === 0 ? (
+                <Card className="p-8 text-center text-muted-foreground">
+                  <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No matching SOPs found. Try rephrasing your question.</p>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {searchResults.recommendations?.map((sop: any, idx: number) => (
+                    <Card key={idx} className="p-6 space-y-3" data-testid={`admin-sop-recommendation-${idx}`}>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <h3 className="font-semibold text-lg">{sop.title}</h3>
+                            <Badge variant="outline" className="text-xs shrink-0">{sop.sopId}</Badge>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-muted-foreground">Match Score:</span>
+                            <div className={`text-xs px-2 py-1 rounded-full font-medium ${sop.relevance >= 80 ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100" : sop.relevance >= 60 ? "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-100" : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-100"}`}>
+                              {sop.relevance}%
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="bg-muted/50 rounded-lg p-4">
+                        <p className="text-sm text-muted-foreground mb-3">
+                          <strong>Why this SOP:</strong> {sop.reasoning}
+                        </p>
+                        <div className="border-t pt-3 mt-3">
+                          <p className="text-sm font-medium mb-2">Relevant Section:</p>
+                          <p className="text-sm line-clamp-3 text-muted-foreground">{sop.content.substring(0, 300)}...</p>
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {!searchResults && (
+            <Card className="p-8 text-center text-muted-foreground mt-4">
+              <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-50" />
+              <p>Start typing your question above to find relevant SOPs</p>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
 
