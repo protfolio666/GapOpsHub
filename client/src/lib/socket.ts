@@ -4,10 +4,22 @@ import { queryClient } from "./queryClient";
 let socket: Socket | null = null;
 
 export function initializeSocket() {
-  if (socket) return socket;
+  if (socket) {
+    console.log("✅ Socket already initialized");
+    return socket;
+  }
 
+  console.log("🔌 Initializing socket connection...");
   socket = ioClient(window.location.origin, {
     withCredentials: true,
+    reconnection: true,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    reconnectionAttempts: 5,
+  });
+
+  socket.on("connect", () => {
+    console.log("✅ Socket connected:", socket?.id);
   });
 
   // Listen for real-time gap updates and invalidate cache
@@ -33,17 +45,17 @@ export function initializeSocket() {
 
   // Listen for comment updates
   socket.on("new-comment", () => {
-    console.log("New comment received via socket");
+    console.log("💬 New comment received via socket");
     queryClient.invalidateQueries({ queryKey: ['/api/gaps'] });
   });
 
   // Listen for connection errors
   socket.on("connect_error", (error) => {
-    console.error("Socket connection error:", error);
+    console.error("❌ Socket connection error:", error);
   });
 
   socket.on("disconnect", () => {
-    console.log("Socket disconnected");
+    console.log("❌ Socket disconnected");
   });
 
   return socket;

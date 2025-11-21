@@ -930,13 +930,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Emit real-time update
       const io = (app as any).io as SocketIOServer;
-      io.emit("gap:updated", {
-        gapId: gap.id,
-        gapNumber: gap.gapId,
-        status: gap.status,
-        action: "updated",
-        timestamp: new Date(),
-      });
+      if (io) {
+        console.log("📡 Emitting gap:updated for patch - Gap ID:", gap.id);
+        io.emit("gap:updated", {
+          gapId: gap.id,
+          gapNumber: gap.gapId,
+          status: gap.status,
+          action: "updated",
+          timestamp: new Date(),
+        });
+      } else {
+        console.log("⚠️ Socket.io not available for patch");
+      }
 
       return res.json({ gap });
     } catch (error) {
@@ -1010,13 +1015,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Emit real-time update
       const io = (app as any).io as SocketIOServer;
-      io.emit("gap:updated", {
-        gapId: gap.id,
-        gapNumber: gap.gapId,
-        status: gap.status,
-        action: "assigned",
-        timestamp: new Date(),
-      });
+      if (io) {
+        console.log("📡 Emitting gap:updated for assign - Gap ID:", gap.id);
+        io.emit("gap:updated", {
+          gapId: gap.id,
+          gapNumber: gap.gapId,
+          status: gap.status,
+          action: "assigned",
+          timestamp: new Date(),
+        });
+      } else {
+        console.log("⚠️ Socket.io not available for assign");
+      }
 
       return res.json({ gap });
     } catch (error) {
@@ -1355,14 +1365,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Emit real-time update to all connected clients
       const io = (app as any).io as SocketIOServer;
-      io.emit("gap:updated", {
-        gapId: gap.id,
-        gapNumber: gap.gapId,
-        status: gap.status,
-        action: "reopened",
-        by: user.name,
-        timestamp: new Date(),
-      });
+      if (io) {
+        console.log("📡 Emitting gap:updated for reopen - Gap ID:", gap.id);
+        io.emit("gap:updated", {
+          gapId: gap.id,
+          gapNumber: gap.gapId,
+          status: gap.status,
+          action: "reopened",
+          by: user.name,
+          timestamp: new Date(),
+        });
+      } else {
+        console.log("⚠️ Socket.io not available for reopen");
+      }
 
       return res.json({ gap });
     } catch (error) {
@@ -1615,14 +1630,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Emit real-time update to all connected clients
       const io = (app as any).io as SocketIOServer;
-      io.emit("gap:updated", {
-        gapId: gap.id,
-        gapNumber: gap.gapId,
-        status: gap.status,
-        action: "resolved",
-        by: user.name,
-        timestamp: new Date(),
-      });
+      if (io) {
+        console.log("📡 Emitting gap:updated for resolve - Gap ID:", gap.id);
+        io.emit("gap:updated", {
+          gapId: gap.id,
+          gapNumber: gap.gapId,
+          status: gap.status,
+          action: "resolved",
+          by: user.name,
+          timestamp: new Date(),
+        });
+      } else {
+        console.log("⚠️ Socket.io not available for resolve");
+      }
 
       return res.json({ gap });
     } catch (error) {
