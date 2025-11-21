@@ -1665,6 +1665,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.delete("/api/sops/:id", requireRole("Management", "Admin"), async (req, res) => {
+    try {
+      const deleted = await storage.deleteSop(Number(req.params.id));
+      if (!deleted) {
+        return res.status(404).json({ message: "SOP not found" });
+      }
+
+      return res.json({ message: "SOP deleted successfully" });
+    } catch (error) {
+      console.error("Delete SOP error:", error);
+      return res.status(500).json({ message: "Failed to delete SOP" });
+    }
+  });
+
+  app.post("/api/sops/search", requireAuth, async (req, res) => {
+    try {
+      const { query } = req.body;
+
+      if (!query || !query.trim()) {
+        return res.status(400).json({ message: "Search query is required" });
+      }
+
+      const sops = await storage.searchSops(query.trim());
+      return res.json({ sops });
+    } catch (error) {
+      console.error("Search SOPs error:", error);
+      return res.status(500).json({ message: "Failed to search SOPs" });
+    }
+  });
+
   // ==================== FORM TEMPLATE ROUTES ====================
   
   // All authenticated users can view templates

@@ -116,7 +116,7 @@ export default function SopManagementPage() {
       title: formData.title,
       description: formData.description,
       content: formData.content,
-      parentSopId: formData.parentSopId ? parseInt(formData.parentSopId) : null,
+      parentSopId: formData.parentSopId && formData.parentSopId !== "none" ? parseInt(formData.parentSopId) : null,
     };
 
     if (editingSop) {
@@ -228,12 +228,12 @@ export default function SopManagementPage() {
 
             <div>
               <label className="text-sm font-medium">Parent SOP (Optional)</label>
-              <Select value={formData.parentSopId} onValueChange={(val) => setFormData({ ...formData, parentSopId: val })}>
+              <Select value={formData.parentSopId || "none"} onValueChange={(val) => setFormData({ ...formData, parentSopId: val === "none" ? "" : val })}>
                 <SelectTrigger data-testid="select-parent-sop">
                   <SelectValue placeholder="Select parent SOP" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">None (Root SOP)</SelectItem>
+                  <SelectItem value="none">None (Root SOP)</SelectItem>
                   {sops.filter(s => s.id !== editingSop?.id).map(sop => (
                     <SelectItem key={sop.id} value={sop.id.toString()}>
                       {sop.title}
