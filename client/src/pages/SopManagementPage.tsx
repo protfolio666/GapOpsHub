@@ -50,7 +50,7 @@ export default function SopManagementPage() {
     title: "",
     description: "",
     content: "",
-    parentSopId: "",
+    parentSopId: "none",
   });
 
   const { data: sopsResponse, isLoading } = useQuery({
@@ -144,7 +144,7 @@ export default function SopManagementPage() {
   });
 
   const resetForm = () => {
-    setFormData({ title: "", description: "", content: "", parentSopId: "" });
+    setFormData({ title: "", description: "", content: "", parentSopId: "none" });
     setEditingSop(null);
   };
 
