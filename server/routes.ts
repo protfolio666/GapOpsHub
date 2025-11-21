@@ -1728,73 +1728,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Use OpenRouter for AI-powered search
-      const openrouterKey = process.env.OPENROUTER_API_KEY;
-      console.log("[AI Search] OpenRouter Key available:", !!openrouterKey);
-      
-      if (!openrouterKey) {
-        console.log("[AI Search] No OpenRouter key - using fallback");
-        // Fallback to basic text search if no AI available
-        const results = await storage.searchSops(question);
-        const recommendations = results.slice(0, 3).map(sop => ({
-          sopId: sop.sopId,
-          title: sop.title,
-          relevance: 60,
-          content: sop.content,
-          reasoning: "Based on keyword matching"
-        }));
-        return res.json({ 
-          recommendations,
-          reasoning: "Using basic search (AI not available)"
-        });
-      }
-
       // Create context for AI
       const sopContext = allSops
-        .map(s => `SOP: ${s.sopId} - ${s.title}\nDescription: ${s.description}\nContent: ${s.content.substring(0, 200)}...`)
-        .join("\n\n");
+        .map(s => `SOP: ${s.sopId} - ${s.title}\nDescription: ${s.description}\nContent: ${s.content.substring(0, 300)}`)
+        .join("\n\n---\n\n");
 
-      const aiPrompt = `You are an expert at finding relevant Standard Operating Procedures (SOPs).
+      const aiPrompt = `You are an expert at finding relevant Standard Operating Procedures (SOPs) to solve operational issues.
 
-Available SOPs:
+AVAILABLE SOPs:
 ${sopContext}
 
-User's Issue/Question: ${question}
+USER QUESTION/ISSUE:
+${question}
 
-Task: Identify the top 3 most relevant SOPs for this issue. For each SOP, provide:
-1. The SOP ID and Title
-2. A relevance score (0-100)
-3. Brief reasoning for why this SOP is relevant
-4. The most relevant section from the SOP
+TASK: 
+Identify the top 3 most relevant SOPs. Return ONLY valid JSON with no markdown or extra text. For each SOP:
+- sopId: The SOP ID
+- title: The SOP title
+- relevance: Relevance score 0-100
+- content: Most relevant section (2-3 lines)
+- reasoning: Why this SOP helps
 
-Format your response as JSON:
+RESPONSE FORMAT (valid JSON only):
 {
   "recommendations": [
-    {
-      "sopId": "SOP-001",
-      "title": "SOP Title",
-      "relevance": 95,
-      "content": "Most relevant section",
-      "reasoning": "Why this is relevant"
-    }
+    {"sopId": "SOP-ID", "title": "Title", "relevance": 95, "content": "relevant text", "reasoning": "why it helps"}
   ],
-  "reasoning": "Overall analysis of the issue"
+  "reasoning": "overall analysis"
 }`;
 
-      console.log("[AI Search] Calling OpenRouter API...");
+      console.log("[AI Search] Calling OpenRouter API with question:", question.substring(0, 50));
+      
       const aiResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${openrouterKey}`,
+          "Authorization": `Bearer ${process.env.OPENROUTER_API_KEY}`,
           "Content-Type": "application/json",
           "HTTP-Referer": "https://solvextra.com",
+          "X-Title": "SolvExtra GO",
         },
         body: JSON.stringify({
-          model: "gpt-4-turbo",
+          model: process.env.OPENROUTER_MODEL || "google/gemini-flash-1.5",
           messages: [
+            { role: "system", content: "You are a helpful assistant that finds relevant SOPs. Respond ONLY with valid JSON." },
             { role: "user", content: aiPrompt }
           ],
-          temperature: 0.7,
+          temperature: 0.3,
+          top_p: 0.9,
         }),
       });
 
@@ -1802,49 +1782,73 @@ Format your response as JSON:
 
       if (!aiResponse.ok) {
         const errorText = await aiResponse.text();
-        console.error("[AI Search] OpenRouter error response:", errorText);
-        // Fallback to basic search
+        console.error("[AI Search] OpenRouter error:", errorText);
+        // Fallback to basic text search
         const results = await storage.searchSops(question);
         const recommendations = results.slice(0, 3).map(sop => ({
           sopId: sop.sopId,
           title: sop.title,
           relevance: 60,
-          content: sop.content,
-          reasoning: "Based on text search"
+          content: sop.content.substring(0, 200),
+          reasoning: "Based on text matching"
         }));
         return res.json({ 
           recommendations,
-          reasoning: "Using text-based search (AI unavailable)"
+          reasoning: "Using text-based search (AI API error)"
         });
       }
 
       const aiData = await aiResponse.json();
-      console.log("[AI Search] OpenRouter response received");
-      
       const aiContent = aiData.choices?.[0]?.message?.content;
       
       if (!aiContent) {
-        console.error("[AI Search] No content in AI response:", aiData);
+        console.error("[AI Search] No content in response:", aiData);
         throw new Error("Invalid AI response");
       }
 
-      // Parse AI response
-      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
-      const parsedResponse = jsonMatch ? JSON.parse(jsonMatch[0]) : null;
+      console.log("[AI Search] AI Response:", aiContent.substring(0, 100));
 
-      if (!parsedResponse || !Array.isArray(parsedResponse.recommendations)) {
-        console.error("[AI Search] Could not parse AI response:", aiContent);
-        throw new Error("Could not parse AI response");
+      // Extract JSON from response
+      const jsonMatch = aiContent.match(/\{[\s\S]*\}/);
+      if (!jsonMatch) {
+        console.error("[AI Search] No JSON found in response");
+        throw new Error("Could not extract JSON from AI response");
       }
 
-      console.log("[AI Search] Successfully parsed recommendations:", parsedResponse.recommendations.length);
+      const parsedResponse = JSON.parse(jsonMatch[0]);
+
+      if (!parsedResponse.recommendations || !Array.isArray(parsedResponse.recommendations)) {
+        console.error("[AI Search] Invalid recommendations format");
+        throw new Error("Invalid recommendations format");
+      }
+
+      console.log("[AI Search] Successfully returned", parsedResponse.recommendations.length, "recommendations");
+      
       return res.json({
         recommendations: parsedResponse.recommendations,
-        reasoning: parsedResponse.reasoning || "AI analysis"
+        reasoning: parsedResponse.reasoning || "AI analysis complete"
       });
     } catch (error) {
       console.error("AI SOP search error:", error);
-      return res.status(500).json({ message: "Failed to search SOPs with AI" });
+      // Fallback to text search on any error
+      try {
+        const { question } = req.body;
+        const results = await storage.searchSops(question);
+        const recommendations = results.slice(0, 3).map(sop => ({
+          sopId: sop.sopId,
+          title: sop.title,
+          relevance: 50,
+          content: sop.content.substring(0, 200),
+          reasoning: "Based on keyword search"
+        }));
+        return res.json({ 
+          recommendations,
+          reasoning: "Using text-based search (AI error occurred)"
+        });
+      } catch (fallbackError) {
+        console.error("Fallback search also failed:", fallbackError);
+        return res.status(500).json({ message: "Search failed" });
+      }
     }
   });
 
