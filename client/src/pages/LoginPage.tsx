@@ -37,7 +37,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <div className="max-w-md mx-auto w-full space-y-12">
           {/* Logo and Title */}
           <div className="space-y-6">
-            <div className="flex items-center gap-3">
+            <div className="login-logo flex items-center gap-3">
               <div className="h-12 w-12 rounded-full overflow-hidden flex items-center justify-center bg-white">
                 <img 
                   src={logoUrl} 
@@ -51,10 +51,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             </div>
             
             <div className="space-y-2">
-              <h2 className="text-3xl font-bold text-gray-900">
+              <h2 className="login-title text-3xl font-bold text-gray-900">
                 Welcome back!
               </h2>
-              <p className="text-gray-600 text-base">
+              <p className="login-description text-gray-600 text-base">
                 Please enter your credentials to log in
               </p>
             </div>
@@ -62,7 +62,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
           {/* Login Form */}
           {!showForm ? (
-            <div className="animate-in fade-in duration-300">
+            <div className="login-continue-btn">
               <Button 
                 onClick={handleContinue}
                 variant="secondary"
@@ -73,8 +73,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               </Button>
             </div>
           ) : (
-            <form onSubmit={handleLogin} className="space-y-6 animate-in slide-in-from-top-4 fade-in duration-500">
-              <div className="space-y-2">
+            <form onSubmit={handleLogin} className="login-form-container space-y-6">
+              <div className="login-form-field space-y-2">
                 <Label htmlFor="email" className="text-sm font-medium text-gray-700">
                   Email Address
                 </Label>
@@ -85,13 +85,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="h-12 text-base rounded-lg border-gray-300 focus:border-teal-500 focus:ring-teal-500"
+                  className="login-input h-12 text-base rounded-lg border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                   disabled={isLoading}
                   autoFocus
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="login-form-field space-y-2">
                 <Label htmlFor="password" className="text-sm font-medium text-gray-700">
                   Password
                 </Label>
@@ -102,14 +102,14 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="h-12 text-base rounded-lg border-gray-300 focus:border-teal-500 focus:ring-teal-500"
+                  className="login-input h-12 text-base rounded-lg border-gray-300 focus:border-teal-500 focus:ring-teal-500"
                   disabled={isLoading}
                 />
               </div>
 
               <Button 
                 type="submit"
-                className="w-full h-12 text-base font-medium bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg" 
+                className="login-button login-form-field w-full h-12 text-base font-medium bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white rounded-lg transition-all shadow-md hover:shadow-lg" 
                 disabled={isLoading}
                 data-testid="button-login"
               >
@@ -128,9 +128,9 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       </div>
 
       {/* Right Side - Illustration (60%) */}
-      <div className="hidden lg:flex lg:w-[60%] bg-gradient-to-br from-gray-50 to-white items-center justify-center p-16 relative overflow-hidden">
+      <div className="hidden lg:flex lg:w-[60%] login-gradient-bg bg-gradient-to-br from-gray-50 to-white items-center justify-center p-16 relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-teal-50/30 via-orange-50/20 to-yellow-50/30"></div>
-        <div className="relative z-10 w-full h-full flex items-center justify-center">
+        <div className="login-illustration relative z-10 w-full h-full flex items-center justify-center">
           <img 
             src={puzzleIllustration} 
             alt="Team Collaboration - Assembling Puzzle" 

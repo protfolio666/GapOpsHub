@@ -353,3 +353,132 @@
     inset: -1px;
   }
 }
+/* Login Page Animations */
+@keyframes float-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float-subtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes pulse-subtle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(13, 148, 136, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(13, 148, 136, 0);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.login-logo {
+  animation: float-in 0.8s ease-out, float-subtle 3s ease-in-out 0.8s infinite;
+}
+
+.login-title {
+  animation: float-in 0.8s ease-out 0.15s both;
+}
+
+.login-subtitle {
+  animation: float-in 0.8s ease-out 0.3s both;
+}
+
+.login-description {
+  animation: float-in 0.8s ease-out 0.45s both;
+}
+
+.login-continue-btn {
+  animation: float-in 0.8s ease-out 0.6s both, glow-pulse 2s ease-in-out 1.4s infinite;
+}
+
+.login-form-container {
+  animation: scale-in 0.5s ease-out;
+}
+
+.login-form-field {
+  animation: float-in 0.6s ease-out;
+}
+
+.login-form-field:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.login-form-field:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.login-form-field:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+.login-input {
+  transition: all 0.3s ease;
+}
+
+.login-input:focus {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(13, 148, 136, 0.15);
+}
+
+.login-button {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.login-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(13, 148, 136, 0.25);
+}
+
+.login-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.login-illustration {
+  animation: float-in 1s ease-out, float-subtle 4s ease-in-out 1s infinite;
+}
+
+.login-gradient-bg {
+  animation: pulse-subtle 4s ease-in-out infinite;
+}
+
+@media (max-width: 1024px) {
+  .login-illustration {
+    animation: none;
+  }
+  
+  .login-gradient-bg {
+    animation: none;
+  }
+}
